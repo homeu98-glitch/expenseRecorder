@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Navigation } from "@/components/Navigation";
+import { NavigationWrapper } from "@/components/NavigationWrapper";
 import { AuthGuard } from "@/components/AuthGuard";
 
 export const metadata: Metadata = {
@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="zh-Hant">
       <body className="min-h-screen pb-20 md:pb-0 md:pt-16">
         <AuthGuard>
-          <Navigation />
+          <NavigationWrapper />
           <main className="container mx-auto px-4 py-6 max-w-4xl">
             {children}
           </main>

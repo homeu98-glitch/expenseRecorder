@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Lock, Store, AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [loginId, setLoginId] = useState("");
@@ -103,20 +104,29 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white rounded-2xl py-4 font-bold text-lg hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <Loader2 className="animate-spin" size={20} />
-                <span>正在驗證...</span>
-              </div>
-            ) : (
-              "立即登入"
-            )}
-          </button>
+          <div className="space-y-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white rounded-2xl py-4 font-bold text-lg hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>正在驗證...</span>
+                </div>
+              ) : (
+                "立即登入"
+              )}
+            </button>
+
+            <Link
+              href="/signup"
+              className="w-full flex items-center justify-center py-2 text-sm text-gray-400 font-medium hover:text-green-600 transition-colors"
+            >
+              建立新商店賬號
+            </Link>
+          </div>
         </form>
 
         <div className="text-center">
