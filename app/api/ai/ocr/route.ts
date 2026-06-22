@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { processReceiptImage } from '@/lib/gemini';
+import { processReceiptWithQwen } from '@/lib/qwen';
 
 export async function POST(request: Request) {
   try {
@@ -9,8 +9,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
-    // Call real Gemini AI OCR
-    const result = await processReceiptImage(image, mimeType || 'image/jpeg');
+    // Call Alibaba Cloud Qwen-VL OCR
+    const result = await processReceiptWithQwen(image, mimeType || 'image/jpeg');
 
     return NextResponse.json(result);
   } catch (err: any) {
