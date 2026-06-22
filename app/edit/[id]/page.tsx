@@ -22,11 +22,28 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
     if (params.id === 'new') {
       const temp = sessionStorage.getItem('temp_receipt');
       if (temp) {
-        const parsed = JSON.parse(temp);
-        setData({
-          ...parsed,
-          items: parsed.items?.map((it: any, i: number) => ({ ...it, id: i })) || []
-        });
+        try {
+          const parsed = JSON.parse(temp);
+          console.log("Loading AI Data:", parsed);
+
+          // Qwen/AI might return items in a nested structure or directly
+          const rawItems = parsed.items || [];
+          const normalizedItems = rawItems.map((it: any, i: number) => ({
+            id: it.id || Date.now() + i,
+            name: it.name || it.item_name || "",
+            quantity: Number(it.quantity) || 1,
+            unit_price: Number(it.unit_price) || Number(it.price) || 0
+          }));
+
+          setData({
+            merchant_name: parsed.merchant_name || parsed.store_name || "",
+            date: parsed.date || new Date().toISOString().split('T')[0],
+            total_amount: Number(parsed.total_amount) || normalizedItems.reduce((acc: number, item: any) => acc + (item.unit_price * item.quantity), 0),
+            items: normalizedItems
+          });
+        } catch (e) {
+          console.error("Error parsing AI data:", e);
+        }
       }
     }
   }, [params.id]);
@@ -115,10 +132,29 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
             </div>
             <div className="flex-1 text-right">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">總金額</label>
-              <div className="text-2xl font-black text-blue-600">${data.total_amount.toLocaleString()}</div>
+              <div className="relative mt-1">
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-blue-600 font-black text-xl">$</span>
+                <input
+                  type="number"
+                  value={data.total_amount}
+                  onChange={(e) => setData({...data, total_amount: parseFloat(e.target.value) || 0})}
+                  className="w-full text-2xl font-black text-blue-600 border-b border-transparent focus:border-blue-500 outline-none text-right bg-transparent"
+                />
+              </div>
             </div>
           </div>
         </section>
+
+        {/* Highlighted Total at top of list */}
+        <div className="bg-blue-600 rounded-2xl p-4 text-white flex items-center justify-between shadow-lg shadow-blue-100">
+           <div className="flex items-center space-x-3">
+             <div className="p-2 bg-white/20 rounded-lg">
+               <Save size={20} />
+             </div>
+             <div className="font-bold">核對總額</div>
+           </div>
+           <div className="text-2xl font-black">${data.total_amount.toLocaleString()}</div>
+        </div>
 
         {/* Items List */}
         <section className="space-y-4">
