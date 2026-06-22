@@ -51,8 +51,9 @@ const schema: ResponseSchema = {
 };
 
 export async function processReceiptImage(base64Image: string, mimeType: string) {
+  // Use the most stable model name for v1beta / Latest
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-latest",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: schema,
