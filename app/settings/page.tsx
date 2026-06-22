@@ -1,11 +1,68 @@
 "use client";
 
-import { Settings, Shield, Bell, Database, Trash2, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Shield, Database, Trash2, ArrowLeft, LogOut, Download, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { getShopUser, logout } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 export default function SettingsPage() {
+  const [user, setUser] = useState<any>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUser(getShopUser());
+  }, []);
+
+  const handleExport = async () => {
+    if (!user) return;
+    setStatus("正在準備匯出數據...");
+
+    const { data, error } = await supabase
+      .from('receipts')
+      .select(`
+        receipt_date,
+        total_amount,
+        merchants(name),
+        receipt_items(name, quantity, unit_price)
+      `)
+      .eq('user_id', user.id);
+
+    if (error) {
+      alert("匯出失敗: " + error.message);
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expense_report_${user.shop_name}.json`;
+    a.click();
+    setStatus("匯出完成！");
+  };
+
+  const handleCleanup = async () => {
+    if (!confirm("確定要清除所有記錄嗎？此操作無法復原。")) return;
+    setStatus("正在清理數據...");
+
+    const { error } = await supabase
+      .from('receipts')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) {
+      alert("清理失敗: " + error.message);
+    } else {
+      setStatus("數據已清空。");
+      setTimeout(() => window.location.reload(), 1500);
+    }
+  };
+
+  if (!user) return null;
+
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 animate-in fade-in duration-500">
       <div className="flex items-center space-x-4">
         <Link href="/" className="text-gray-500 hover:text-blue-600 transition-colors">
           <ArrowLeft size={24} />
@@ -14,81 +71,73 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Profile / Account */}
+        {/* User Info */}
         <section className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase flex items-center">
-            <Shield size={16} className="mr-2" /> 帳戶與安全
+          <h2 className="text-sm font-bold text-gray-400 uppercase flex items-center">
+            <Shield size={16} className="mr-2" /> 賬戶資料
           </h2>
-          <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 cursor-pointer">
-            <div>
-              <div className="font-medium">店主資料</div>
-              <div className="text-xs text-gray-400">修改您的顯示名稱與密碼</div>
+          <div className="flex items-center space-x-4 py-2">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-black text-xl">
+              {user.shop_name[0]}
             </div>
-            <span className="text-blue-600 text-sm font-medium">修改</span>
-          </div>
-          <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 cursor-pointer">
             <div>
-              <div className="font-medium">多設備同步</div>
-              <div className="text-xs text-gray-400">目前已連接 2 個設備</div>
-            </div>
-            <span className="text-gray-400 text-sm">管理</span>
-          </div>
-        </section>
-
-        {/* System Settings */}
-        <section className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase flex items-center">
-            <Settings size={16} className="mr-2" /> 應用程式設定
-          </h2>
-          <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-            <div>
-              <div className="font-medium">預設幣種</div>
-              <div className="text-xs text-gray-400">目前設定為 HKD ($)</div>
-            </div>
-            <select className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:border-blue-500">
-              <option>HKD</option>
-              <option>TWD</option>
-              <option>USD</option>
-            </select>
-          </div>
-          <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-            <div>
-              <div className="font-medium">通知提醒</div>
-              <div className="text-xs text-gray-400">當價格大幅上漲時提醒我</div>
-            </div>
-            <div className="w-10 h-6 bg-blue-600 rounded-full relative cursor-pointer shadow-inner">
-               <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow"></div>
+              <div className="font-bold text-gray-800">{user.shop_name}</div>
+              <div className="text-xs text-gray-400 font-mono">ID: {user.login_id}</div>
             </div>
           </div>
+          <button
+            onClick={logout}
+            className="w-full flex items-center justify-center space-x-2 py-3 border border-red-100 text-red-600 rounded-xl hover:bg-red-50 transition-colors font-bold"
+          >
+            <LogOut size={18} />
+            <span>登出系統</span>
+          </button>
         </section>
 
         {/* Data Management */}
         <section className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase flex items-center">
+          <h2 className="text-sm font-bold text-gray-400 uppercase flex items-center">
             <Database size={16} className="mr-2" /> 數據管理
           </h2>
-          <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 cursor-pointer">
-            <div>
-              <div className="font-medium">匯出數據</div>
-              <div className="text-xs text-gray-400">下載所有開支記錄為 CSV 檔案</div>
-            </div>
-            <span className="text-blue-600 text-sm font-medium">匯出</span>
-          </div>
-          <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-            <div>
-              <div className="font-medium text-red-600 flex items-center">
-                <Trash2 size={16} className="mr-2" /> 清除快取數據
+          <button
+            onClick={handleExport}
+            className="w-full flex items-center justify-between py-3 border-b border-gray-50 last:border-0"
+          >
+            <div className="flex items-center space-x-3 text-left">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Download size={20} /></div>
+              <div>
+                <div className="font-bold text-gray-700 text-sm">匯出數據 (JSON)</div>
+                <div className="text-[10px] text-gray-400 font-medium">備份您的所有開支記錄</div>
               </div>
-              <div className="text-xs text-gray-400">這不會刪除您的資料庫記錄</div>
             </div>
-            <button className="text-gray-400 text-sm hover:text-red-500 transition-colors">清除</button>
-          </div>
+            <span className="text-blue-600 text-xs font-bold">匯出</span>
+          </button>
+
+          <button
+            onClick={handleCleanup}
+            className="w-full flex items-center justify-between py-3 border-b border-gray-50 last:border-0"
+          >
+            <div className="flex items-center space-x-3 text-left">
+              <div className="p-2 bg-red-50 text-red-600 rounded-lg"><Trash2 size={20} /></div>
+              <div>
+                <div className="font-bold text-gray-700 text-sm">刪除所有數據</div>
+                <div className="text-[10px] text-gray-400 font-medium">清空此商店的所有記錄</div>
+              </div>
+            </div>
+            <span className="text-red-600 text-xs font-bold">清空</span>
+          </button>
         </section>
 
-        {/* Footer info */}
+        {status && (
+          <div className="bg-blue-50 text-blue-700 p-4 rounded-xl flex items-center space-x-2 border border-blue-100 animate-pulse">
+            <CheckCircle2 size={18} />
+            <span className="text-sm font-bold">{status}</span>
+          </div>
+        )}
+
         <div className="text-center pt-8">
-          <div className="text-xs text-gray-400">開支記錄助手 v1.0.0</div>
-          <div className="text-[10px] text-gray-300 mt-1">© 2024 Expense Recorder Team</div>
+          <div className="text-xs text-gray-400 font-bold">開支記錄助手 v1.0.0</div>
+          <div className="text-[10px] text-gray-300 mt-1 uppercase tracking-widest font-black">Powered by Gemini AI</div>
         </div>
       </div>
     </div>

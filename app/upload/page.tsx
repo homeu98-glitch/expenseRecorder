@@ -29,17 +29,32 @@ export default function UploadPage() {
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) return;
+  const handleAIUpload = async () => {
+    if (!file || !preview) return;
     setLoading(true);
     setError(null);
     try {
-      // Simulate AI Processing
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      router.push("/edit/new");
-    } catch (err) {
-      setError("處理收據時出錯，請重試。");
+      // 1. Prepare Base64 (Gemini requirement)
+      const base64 = preview.split(',')[1];
+
+      // 2. Call Real API Route
+      const response = await fetch('/api/ai/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, mimeType: file.type })
+      });
+
+      if (!response.ok) throw new Error("AI 識別失敗，請檢查網路或 API Key");
+
+      const result = await response.json();
+
+      // 3. Store result in session storage temporarily for the edit page
+      sessionStorage.setItem('temp_receipt', JSON.stringify(result));
+      router.push("/edit/new?source=ai");
+    } catch (err: any) {
+      setError(err.message || "處理收據時出錯，請重試。");
       console.error(err);
+    } finally {
       setLoading(false);
     }
   };
@@ -67,7 +82,7 @@ export default function UploadPage() {
             </div>
             <div className="text-center">
               <h3 className="font-bold text-lg text-gray-800">拍照或上傳圖片</h3>
-              <p className="text-sm text-gray-500">AI 將自動識別 Traditional Chinese 收據</p>
+              <p className="text-sm text-gray-500 font-medium">使用 Gemini AI 自動識別繁體中文收據</p>
             </div>
             <input
               type="file"
@@ -87,7 +102,7 @@ export default function UploadPage() {
             </div>
             <div className="text-center">
               <h3 className="font-bold text-lg text-gray-800">手動輸入資料</h3>
-              <p className="text-sm text-gray-500">直接填寫品項、數量及金額</p>
+              <p className="text-sm text-gray-500 font-medium">手動填寫供應商、日期與品項</p>
             </div>
           </div>
         </div>
@@ -108,19 +123,19 @@ export default function UploadPage() {
           </div>
 
           <button
-            onClick={handleUpload}
+            onClick={handleAIUpload}
             disabled={loading}
-            className="w-full btn-primary py-5 flex items-center justify-center space-x-3 text-lg disabled:opacity-50"
+            className="w-full bg-blue-600 text-white rounded-2xl py-5 flex items-center justify-center space-x-3 text-lg font-bold disabled:opacity-50 shadow-xl shadow-blue-100"
           >
             {loading ? (
               <>
                 <Loader2 className="animate-spin" size={24} />
-                <span>AI 正在分析Traditional Chinese內容...</span>
+                <span>Gemini AI 正在分析收據...</span>
               </>
             ) : (
               <>
                 <Upload size={24} />
-                <span>開始 AI 自動識別</span>
+                <span>確認並開始 AI 識別</span>
               </>
             )}
           </button>
@@ -129,59 +144,44 @@ export default function UploadPage() {
 
       {mode === 'manual' && (
         <div className="card p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-           <h3 className="font-bold text-lg border-b pb-2">手動新增記錄</h3>
-           <div className="space-y-4">
+           <h3 className="font-black text-xl text-gray-800 border-b border-gray-100 pb-3">手動新增記錄</h3>
+           <div className="space-y-5">
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase">供應商名稱</label>
-                <input type="text" className="w-full border-b border-gray-200 py-2 outline-none focus:border-blue-500" placeholder="如: 興發食材" />
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">供應商名稱</label>
+                <input id="manual_merchant" type="text" className="w-full bg-gray-50 border-b-2 border-gray-100 py-3 px-2 outline-none focus:border-blue-500 transition-all font-bold text-lg" placeholder="例如: 興發食材" />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase">交易日期</label>
-                <input type="date" className="w-full border-b border-gray-200 py-2 outline-none focus:border-blue-500" defaultValue={new Date().toISOString().split('T')[0]} />
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">交易日期</label>
+                <input id="manual_date" type="date" className="w-full bg-gray-50 border-b-2 border-gray-100 py-3 px-2 outline-none focus:border-blue-500 transition-all font-bold" defaultValue={new Date().toISOString().split('T')[0]} />
               </div>
               <button
-                onClick={() => router.push("/edit/manual")}
-                className="w-full bg-green-600 text-white rounded-xl py-4 font-bold hover:bg-green-700 transition-colors"
+                onClick={() => {
+                  const m = (document.getElementById('manual_merchant') as HTMLInputElement).value;
+                  const d = (document.getElementById('manual_date') as HTMLInputElement).value;
+                  if (!m) return alert("請輸入供應商名稱");
+                  sessionStorage.setItem('temp_receipt', JSON.stringify({ merchant_name: m, date: d, items: [], total_amount: 0 }));
+                  router.push("/edit/new?source=manual");
+                }}
+                className="w-full bg-blue-600 text-white rounded-2xl py-4 font-black text-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
               >
-                繼續填寫品項明細
+                繼續填寫明細
               </button>
               <button
                 onClick={() => setMode('selection')}
-                className="w-full text-gray-400 text-sm py-2"
+                className="w-full text-gray-400 text-sm font-bold py-2 hover:text-gray-600"
               >
-                返回選擇上傳方式
+                返回選擇
               </button>
            </div>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-4 rounded-xl border border-red-100">
-          <AlertCircle size={20} />
-          <span className="font-medium">{error}</span>
+        <div className="flex items-center space-x-3 text-red-600 bg-red-50 p-5 rounded-2xl border-2 border-red-100">
+          <AlertCircle size={24} />
+          <span className="font-bold">{error}</span>
         </div>
       )}
-
-      <div className="card bg-blue-50 border-blue-100">
-        <h3 className="font-bold text-blue-800 flex items-center mb-3">
-          <FileText size={18} className="mr-2" />
-          使用說明
-        </h3>
-        <ul className="text-sm text-blue-700 space-y-2">
-          <li className="flex items-start">
-            <span className="bg-blue-200 text-blue-800 text-[10px] w-4 h-4 flex items-center justify-center rounded-full mr-2 mt-0.5">1</span>
-            <span>AI 自動識別支援手機拍攝收據、電腦上傳圖片。</span>
-          </li>
-          <li className="flex items-start">
-            <span className="bg-blue-200 text-blue-800 text-[10px] w-4 h-4 flex items-center justify-center rounded-full mr-2 mt-0.5">2</span>
-            <span>如果收據字跡模糊，建議使用「手動輸入」。</span>
-          </li>
-          <li className="flex items-start">
-            <span className="bg-blue-200 text-blue-800 text-[10px] w-4 h-4 flex items-center justify-center rounded-full mr-2 mt-0.5">3</span>
-            <span>所有上傳圖片將於 60 天後自動刪除。</span>
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }

@@ -1,120 +1,183 @@
 "use client";
 
-import { useState } from "react";
-import { Save, Trash2, Plus, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getShopUser } from "@/lib/auth";
 
-export default function EditReceiptPage() {
+export default function EditReceiptPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  // Mock data that would normally come from Gemini OCR
-  const [data, setData] = useState({
-    merchant_name: "批發蔬菜市場",
-    date: "2024-06-22",
-    total_amount: 1560,
-    items: [
-      { id: 1, name: "雞翅 (10kg)", quantity: 2, unit_price: 450 },
-      { id: 2, name: "豬五花 (5kg)", quantity: 1, unit_price: 660 },
-    ]
+  const searchParams = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>({
+    merchant_name: "",
+    date: new Date().toISOString().split('T')[0],
+    total_amount: 0,
+    items: []
   });
 
-  const handleUpdateItem = (index: number, field: string, value: any) => {
-    const newItems = [...data.items];
-    (newItems[index] as any)[field] = value;
+  useEffect(() => {
+    // 1. Load from session storage if "new"
+    if (params.id === 'new') {
+      const temp = sessionStorage.getItem('temp_receipt');
+      if (temp) {
+        const parsed = JSON.parse(temp);
+        setData({
+          ...parsed,
+          items: parsed.items?.map((it: any, i: number) => ({ ...it, id: i })) || []
+        });
+      }
+    }
+  }, [params.id]);
 
-    // Recalculate total
-    const newTotal = newItems.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
-
+  const handleUpdateItem = (id: number, field: string, value: any) => {
+    const newItems = data.items.map((item: any) =>
+      item.id === id ? { ...item, [field]: value } : item
+    );
+    const newTotal = newItems.reduce((acc: number, item: any) => acc + (Number(item.unit_price) * Number(item.quantity || 1)), 0);
     setData({ ...data, items: newItems, total_amount: newTotal });
   };
 
-  const handleSave = () => {
-    alert("記錄已儲存！");
-    router.push("/");
+  const handleAddItem = () => {
+    const newItem = { id: Date.now(), name: "", quantity: 1, unit_price: 0 };
+    setData({ ...data, items: [...data.items, newItem] });
+  };
+
+  const handleRemoveItem = (id: number) => {
+    const newItems = data.items.filter((it: any) => it.id !== id);
+    const newTotal = newItems.reduce((acc: number, item: any) => acc + (Number(item.unit_price) * Number(item.quantity || 1)), 0);
+    setData({ ...data, items: newItems, total_amount: newTotal });
+  };
+
+  const handleSave = async () => {
+    const user = getShopUser();
+    if (!user) return alert("請先登入");
+    if (!data.merchant_name) return alert("請輸入供應商名稱");
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/db/save-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          ...data
+        })
+      });
+
+      if (!response.ok) throw new Error("儲存失敗");
+
+      alert("記錄已成功存入資料庫！");
+      sessionStorage.removeItem('temp_receipt');
+      router.push("/");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
-        <Link href="/upload" className="text-gray-500 hover:text-blue-600 transition-colors">
+        <button onClick={() => router.back()} className="text-gray-500 hover:text-blue-600 transition-colors">
           <ArrowLeft size={24} />
-        </Link>
-        <h1 className="text-xl font-bold text-center flex-1">檢查並修改記錄</h1>
-        <div className="w-6" /> {/* Spacer */}
+        </button>
+        <h1 className="text-xl font-black text-center flex-1">
+          {params.id === 'new' ? '檢查並儲存記錄' : '編輯開支記錄'}
+        </h1>
+        <div className="w-6" />
       </div>
 
       <div className="space-y-4">
         {/* Basic Info */}
-        <section className="card space-y-4">
+        <section className="card space-y-4 border-l-4 border-l-blue-600">
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase">商店/供應商名稱</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">供應商名稱</label>
             <input
               type="text"
               value={data.merchant_name}
               onChange={(e) => setData({...data, merchant_name: e.target.value})}
-              className="w-full text-lg font-bold border-b border-gray-200 py-1 focus:border-blue-500 outline-none"
+              className="w-full text-lg font-black border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all"
+              placeholder="輸入店名..."
             />
           </div>
-          <div className="flex space-x-4">
+          <div className="flex space-x-6">
             <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-500 uppercase">日期</label>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">交易日期</label>
               <input
                 type="date"
                 value={data.date}
                 onChange={(e) => setData({...data, date: e.target.value})}
-                className="w-full border-b border-gray-200 py-1 focus:border-blue-500 outline-none"
+                className="w-full border-b border-gray-100 py-2 focus:border-blue-500 outline-none font-bold"
               />
             </div>
             <div className="flex-1 text-right">
-              <label className="text-xs font-semibold text-gray-500 uppercase">總金額</label>
-              <div className="text-2xl font-bold text-blue-600">${data.total_amount}</div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">總金額</label>
+              <div className="text-2xl font-black text-blue-600">${data.total_amount.toLocaleString()}</div>
             </div>
           </div>
         </section>
 
         {/* Items List */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">清單項目</h2>
-            <button className="text-sm text-blue-600 flex items-center space-x-1">
-              <Plus size={16} />
-              <span>新增項目</span>
+        <section className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-lg font-black text-gray-700">品項明細</h2>
+            <button
+              onClick={handleAddItem}
+              className="text-xs font-black text-blue-600 flex items-center bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100"
+            >
+              <Plus size={14} className="mr-1" /> 新增品項
             </button>
           </div>
 
           <div className="space-y-3">
-            {data.items.map((item, index) => (
-              <div key={item.id} className="card p-4 space-y-3">
+            {data.items.length === 0 && (
+              <div className="card py-8 text-center text-gray-400 text-sm italic">
+                尚未加入任何品項
+              </div>
+            )}
+            {data.items.map((item: any) => (
+              <div key={item.id} className="card p-4 space-y-4 relative group hover:border-blue-200 transition-all">
                 <div className="flex justify-between items-start">
                   <input
                     type="text"
+                    placeholder="品項名稱 (如: 雞翅)"
                     value={item.name}
-                    onChange={(e) => handleUpdateItem(index, 'name', e.target.value)}
-                    className="font-medium border-b border-transparent focus:border-blue-300 outline-none flex-1"
+                    onChange={(e) => handleUpdateItem(item.id, 'name', e.target.value)}
+                    className="font-black text-gray-800 border-b border-transparent focus:border-blue-200 outline-none flex-1 py-1"
                   />
-                  <button className="text-gray-300 hover:text-red-500">
+                  <button
+                    onClick={() => handleRemoveItem(item.id)}
+                    className="text-gray-300 hover:text-red-500 ml-2"
+                  >
                     <Trash2 size={18} />
                   </button>
                 </div>
                 <div className="flex items-center justify-between space-x-4">
-                  <div className="flex items-center border border-gray-200 rounded-lg px-2">
-                    <span className="text-xs text-gray-400 mr-2 uppercase">數量</span>
+                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-1">
+                    <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">數量</span>
                     <input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value))}
-                      className="w-16 py-1 outline-none text-center"
+                      onChange={(e) => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value))}
+                      className="w-12 bg-transparent py-1 outline-none text-center font-bold"
                     />
                   </div>
-                  <div className="flex items-center border border-gray-200 rounded-lg px-2 flex-1">
-                    <span className="text-xs text-gray-400 mr-2 uppercase">單價</span>
-                    <span className="text-gray-500 mr-1">$</span>
+                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-1 flex-1">
+                    <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">單價</span>
+                    <span className="text-gray-600 font-bold mr-1">$</span>
                     <input
                       type="number"
                       value={item.unit_price}
-                      onChange={(e) => handleUpdateItem(index, 'unit_price', parseFloat(e.target.value))}
-                      className="w-full py-1 outline-none"
+                      onChange={(e) => handleUpdateItem(item.id, 'unit_price', parseFloat(e.target.value))}
+                      className="w-full bg-transparent py-1 outline-none font-bold"
                     />
+                  </div>
+                  <div className="text-right min-w-[60px]">
+                    <div className="text-[10px] font-black text-gray-400 uppercase">小計</div>
+                    <div className="font-black text-gray-700">${(Number(item.unit_price) * Number(item.quantity || 1)).toLocaleString()}</div>
                   </div>
                 </div>
               </div>
@@ -123,13 +186,14 @@ export default function EditReceiptPage() {
         </section>
       </div>
 
-      <footer className="pt-6">
+      <footer className="pt-8">
         <button
           onClick={handleSave}
-          className="w-full btn-primary py-4 flex items-center justify-center space-x-2"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white rounded-2xl py-5 flex items-center justify-center space-x-3 shadow-2xl shadow-blue-200 active:scale-95 transition-all disabled:opacity-50"
         >
-          <Save size={20} />
-          <span className="font-semibold text-lg">確認並儲存記錄</span>
+          {loading ? <Loader2 className="animate-spin" size={24} /> : <CheckCircle2 size={24} />}
+          <span className="font-black text-xl">確認並儲存至資料庫</span>
         </button>
       </footer>
     </div>
