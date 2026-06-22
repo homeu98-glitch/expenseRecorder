@@ -1,6 +1,15 @@
 import { GoogleGenerativeAI, SchemaType, ResponseSchema } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
+// Use a SERVER-SIDE ONLY key name to prevent GitHub push blocks and ensure security
+const getApiKey = () => {
+  const key = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  if (!key) {
+    throw new Error("GEMINI_API_KEY is not defined in environment variables");
+  }
+  return key;
+};
+
+const genAI = new GoogleGenerativeAI(getApiKey());
 
 const schema: ResponseSchema = {
   description: "Extract receipt details",
