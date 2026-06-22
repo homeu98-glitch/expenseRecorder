@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8f9fa;
+  --foreground: #202124;
+  --primary: #1a73e8;
+  --primary-hover: #1765cc;
+  --card: #ffffff;
+  --border: #dadce0;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm;
+  }
+  .card {
+    @apply bg-white border border-gray-200 rounded-lg p-4 shadow-sm;
+  }
+}
