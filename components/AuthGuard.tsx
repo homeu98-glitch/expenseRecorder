@@ -10,14 +10,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const user = localStorage.getItem("shop_user");
-    if (!user && pathname !== "/login") {
+    const isAuthPage = pathname === "/login" || pathname === "/signup";
+
+    if (!user && !isAuthPage) {
       router.push("/login");
     } else {
       setAuthorized(true);
     }
   }, [pathname, router]);
 
-  if (!authorized && pathname !== "/login") {
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
+
+  if (!authorized && !isAuthPage) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-blue-600 font-medium text-lg">載入中...</div>
