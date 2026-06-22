@@ -1,36 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TrendingUp, TrendingDown, Receipt, ShoppingBag,
-  PlusCircle as PlusCircleIcon, Calendar, Search, ChevronRight
+  PlusCircle as PlusCircleIcon, Search, ChevronRight, Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { clsx } from "clsx";
+import { getShopUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import { format, startOfDay, startOfWeek, startOfMonth } from "date-fns";
 
 const timeFilters = [
   { id: 'today', label: '今日' },
   { id: 'week', label: '本週' },
   { id: 'month', label: '本月' },
-  { id: 'custom', label: '自訂' },
 ];
 
 export default function Home() {
   const [filter, setFilter] = useState('today');
   const [searchQuery, setSearchQuery] = useState("");
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setSummary] = useState({ count: 0, total: 0, up: 0, down: 0 });
+  const [recent, setRecent] = useState<any[]>([]);
+
+  useEffect(() => {
+    const shopUser = getShopUser();
+    setUser(shopUser);
+    if (shopUser) {
+      fetchDashboardData(shopUser.id, filter);
+    }
+  }, [filter]);
+
+  async function fetchDashboardData(userId: string, currentFilter: string) {
+    setLoading(true);
+    try {
+      let startDate = startOfDay(new Date());
+      if (currentFilter === 'week') startDate = startOfWeek(new Date());
+      else if (currentFilter === 'month') startDate = startOfMonth(new Date());
+
+      // 1. Fetch Summary Stats
+      const { data: receipts, error: rError } = await supabase
+        .from('receipts')
+        .select('total_amount, id, merchant_id, merchants(name), receipt_date')
+        .eq('user_id', userId)
+        .gte('receipt_date', format(startDate, 'yyyy-MM-dd'));
+
+      if (rError) throw rError;
+
+      const total = receipts?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0;
+
+      setSummary({
+        count: receipts?.length || 0,
+        total: total,
+        up: 0, // Logic for price trends would go here with more complex queries
+        down: 0
+      });
+
+      setRecent(receipts?.slice(0, 5) || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!user) return null;
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 animate-in fade-in duration-500">
       {/* Header & Filter */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">您好, 店主</h1>
-            <p className="text-gray-500 text-sm">追蹤您的開支與價格變動</p>
+            <h1 className="text-2xl font-bold text-gray-800">您好, {user.shop_name}</h1>
+            <p className="text-gray-500 text-sm">您的開支與價格變動概覽</p>
           </div>
-          <button className="p-2 bg-white border border-gray-200 rounded-full text-gray-400 hover:text-blue-600 transition-colors">
-            <Search size={20} />
-          </button>
+          <Link href="/settings" className="p-2 bg-white border border-gray-200 rounded-full text-gray-400 hover:text-blue-600 transition-colors">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs">
+              {user.shop_name[0]}
+            </div>
+          </Link>
         </div>
 
         {/* Time Range Selector */}
@@ -40,10 +91,10 @@ export default function Home() {
               key={t.id}
               onClick={() => setFilter(t.id)}
               className={clsx(
-                "px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                "px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all",
                 filter === t.id
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-blue-300"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
+                  : "bg-white text-gray-500 border border-gray-100 hover:border-blue-200"
               )}
             >
               {t.label}
@@ -54,41 +105,42 @@ export default function Home() {
 
       {/* Quick Stats (Interactive Cards) */}
       <div className="grid grid-cols-2 gap-4">
-        <Link href="/reports" className="card flex flex-col items-center justify-center py-6 hover:border-blue-300 transition-all active:scale-95">
-          <Receipt className="text-blue-600 mb-2" size={24} />
-          <span className="text-xs text-gray-500">已記錄收據</span>
-          <span className="text-xl font-bold">12 張</span>
+        <Link href="/reports?view=receipts" className="card flex flex-col items-center justify-center py-6 hover:border-blue-300 transition-all active:scale-95 group">
+          <Receipt className="text-blue-600 mb-2 group-hover:scale-110 transition-transform" size={28} />
+          <span className="text-xs text-gray-400 font-medium">已記錄收據</span>
+          <span className="text-2xl font-black text-gray-800">{loading ? "..." : stats.count} 張</span>
         </Link>
-        <Link href="/reports" className="card flex flex-col items-center justify-center py-6 hover:border-blue-300 transition-all active:scale-95">
-          <ShoppingBag className="text-green-600 mb-2" size={24} />
-          <span className="text-xs text-gray-500">總支出額</span>
-          <span className="text-xl font-bold">$8,450</span>
+        <Link href="/reports" className="card flex flex-col items-center justify-center py-6 hover:border-blue-300 transition-all active:scale-95 group">
+          <ShoppingBag className="text-green-600 mb-2 group-hover:scale-110 transition-transform" size={28} />
+          <span className="text-xs text-gray-400 font-medium">總支出額</span>
+          <span className="text-2xl font-black text-gray-800">${loading ? "..." : stats.total.toLocaleString()}</span>
         </Link>
-        <Link href="/reports?trend=up" className="card flex flex-col items-center justify-center py-4 hover:border-red-200 transition-all active:scale-95">
+        <Link href="/reports?view=trends&type=up" className="card flex flex-col items-center justify-center py-4 hover:border-red-200 transition-all active:scale-95 group">
           <div className="flex items-center space-x-2">
-            <TrendingDown className="text-red-600" size={18} />
-            <span className="text-lg font-bold text-red-600">3</span>
+            <TrendingDown className="text-red-600 group-hover:translate-y-[-2px] transition-transform" size={20} />
+            <span className="text-xl font-black text-red-600">{stats.up}</span>
           </div>
-          <span className="text-[10px] text-gray-500 mt-1">價格上漲項</span>
+          <span className="text-[10px] text-gray-400 font-bold mt-1">價格上漲項</span>
         </Link>
-        <Link href="/reports?trend=down" className="card flex flex-col items-center justify-center py-4 hover:border-green-200 transition-all active:scale-95">
+        <Link href="/reports?view=trends&type=down" className="card flex flex-col items-center justify-center py-4 hover:border-green-200 transition-all active:scale-95 group">
            <div className="flex items-center space-x-2">
-            <TrendingUp className="text-green-600" size={18} />
-            <span className="text-lg font-bold text-green-600">5</span>
+            <TrendingUp className="text-green-600 group-hover:translate-y-[2px] transition-transform" size={20} />
+            <span className="text-xl font-black text-green-600">{stats.down}</span>
           </div>
-          <span className="text-[10px] text-gray-500 mt-1">價格下降項</span>
+          <span className="text-[10px] text-gray-400 font-bold mt-1">價格下降項</span>
         </Link>
       </div>
 
       {/* Search Input for Quick Check */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+      <div className="relative group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
         <input
           type="text"
-          placeholder="搜尋食材或品項 (如: 雞翅, 豬肉)..."
-          className="w-full bg-white border border-gray-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:border-blue-500 shadow-sm"
+          placeholder="搜尋食材歷史記錄 (如: 雞翅)..."
+          className="w-full bg-white border border-gray-100 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-blue-500 shadow-sm focus:shadow-md transition-all text-sm font-medium"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (window.location.href = `/reports?q=${searchQuery}`)}
         />
       </div>
 
@@ -97,43 +149,57 @@ export default function Home() {
         {/* Recent Activity */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">最近上傳記錄</h2>
-            <Link href="/reports" className="text-sm text-blue-600 flex items-center">全部 <ChevronRight size={14} /></Link>
+            <h2 className="text-lg font-black text-gray-700">最近上傳記錄</h2>
+            <Link href="/reports" className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full flex items-center">
+              查看全部 <ChevronRight size={14} className="ml-0.5" />
+            </Link>
           </div>
-          <div className="space-y-3">
-            {[
-              { id: '1', store: "興發食材批發", date: "今天 10:30", amount: 1250, status: 'processed' },
-              { id: '2', store: "萬里香蔬菜", date: "昨天 16:45", amount: 840, status: 'processed' },
-              { id: '3', store: "金源肉食", date: "2024-06-18", amount: 4200, status: 'processed' },
-            ].map((item) => (
-              <Link key={item.id} href={`/edit/${item.id}`} className="card flex items-center justify-between p-4 hover:bg-gray-50 transition-colors active:bg-gray-100">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
-                    {item.store[0]}
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-300">
+               <Loader2 className="animate-spin mb-2" size={32} />
+               <p className="text-xs">數據加載中...</p>
+            </div>
+          ) : recent.length === 0 ? (
+            <div className="card p-12 text-center space-y-3 bg-gray-50/50 border-dashed border-gray-200">
+               <div className="text-gray-300 flex justify-center"><Receipt size={48} /></div>
+               <p className="text-gray-400 text-sm font-medium">暫無開支記錄，立即上傳一張吧！</p>
+               <Link href="/upload" className="inline-block text-blue-600 font-bold text-sm">立即開始</Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recent.map((item) => (
+                <Link key={item.id} href={`/edit/${item.id}`} className="card flex items-center justify-between p-4 hover:bg-gray-50 transition-all active:scale-[0.99] border-l-4 border-l-blue-500">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xl">
+                      {item.merchants?.name[0] || '?'}
+                    </div>
+                    <div>
+                      <div className="font-bold text-gray-800">{item.merchants?.name || '未知供應商'}</div>
+                      <div className="text-xs text-gray-400 font-medium">{item.receipt_date}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-bold text-gray-800">{item.store}</div>
-                    <div className="text-xs text-gray-400">{item.date}</div>
+                  <div className="text-right">
+                    <div className="font-black text-gray-700 text-lg">${Number(item.total_amount).toLocaleString()}</div>
+                    <div className="text-[10px] font-bold text-blue-600 flex items-center justify-end">
+                      點擊查看 <ChevronRight size={10} />
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-gray-700 text-lg">${item.amount}</div>
-                  <div className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded inline-block">已完成</div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
       {/* Floating Action Button for Upload */}
-      <div className="fixed bottom-20 right-6 md:bottom-10 md:right-10 flex flex-col items-end space-y-4 pointer-events-none">
+      <div className="fixed bottom-20 right-6 md:bottom-10 md:right-10 flex flex-col items-end space-y-4">
         <Link
           href="/upload"
-          className="pointer-events-auto bg-blue-600 text-white rounded-full p-4 flex items-center justify-center shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-90 transition-all group"
+          className="bg-blue-600 text-white rounded-full p-5 flex items-center justify-center shadow-2xl shadow-blue-300 hover:bg-blue-700 active:scale-90 transition-all group"
         >
           <PlusCircleIcon size={32} />
-          <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-300 font-bold whitespace-nowrap">上傳收據</span>
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-3 transition-all duration-300 font-black whitespace-nowrap">上傳收據</span>
         </Link>
       </div>
     </div>

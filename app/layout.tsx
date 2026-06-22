@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navigation } from "@/components/Navigation";
+import { AuthGuard } from "@/components/AuthGuard";
 
 export const metadata: Metadata = {
   title: "開支記錄助手 - 智能收據管理",
@@ -21,10 +22,12 @@ export default function RootLayout({
   return (
     <html lang="zh-Hant">
       <body className="min-h-screen pb-20 md:pb-0 md:pt-16">
-        <Navigation />
-        <main className="container mx-auto px-4 py-6 max-w-4xl">
-          {children}
-        </main>
+        <AuthGuard>
+          <Navigation />
+          <main className="container mx-auto px-4 py-6 max-w-4xl">
+            {children}
+          </main>
+        </AuthGuard>
       </body>
     </html>
   );
