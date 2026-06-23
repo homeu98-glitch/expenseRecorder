@@ -422,7 +422,7 @@ export default function EditReceiptPage() {
               </select>
             </div>
           </div>
-          <div className="flex space-x-6">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
             <div className="flex-1">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">交易日期</label>
               <input
@@ -448,23 +448,23 @@ export default function EditReceiptPage() {
         </section>
 
         {/* Highlighted Total at top of list */}
-        <div className="bg-blue-600 rounded-2xl p-4 text-white flex items-center justify-between shadow-lg shadow-blue-100">
-           <div className="flex items-center space-x-3">
+        <div className="bg-blue-600 rounded-2xl p-4 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-lg shadow-blue-100">
+           <div className="flex items-center space-x-3 min-w-0">
              <div className="p-2 bg-white/20 rounded-lg">
                <Save size={20} />
              </div>
-             <div className="font-bold">核對總額</div>
+             <div className="font-bold truncate">核對總額</div>
            </div>
-           <div className="text-2xl font-black">${data.total_amount.toLocaleString()}</div>
+           <div className="text-xl sm:text-2xl font-black break-all sm:text-right">${data.total_amount.toLocaleString()}</div>
         </div>
 
         {/* Items List */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between px-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
             <h2 className="text-lg font-black text-gray-700">品項明細</h2>
             <button
               onClick={handleAddItem}
-              className="text-xs font-black text-blue-600 flex items-center bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100"
+              className="text-xs font-black text-blue-600 inline-flex items-center justify-center bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 self-start sm:self-auto"
             >
               <Plus size={14} className="mr-1" /> 新增品項
             </button>
@@ -478,15 +478,15 @@ export default function EditReceiptPage() {
             )}
             {data.items.map((item) => (
               <div key={item.id} className="card p-4 space-y-4 relative group hover:border-blue-200 transition-all">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
                   <input
                     type="text"
                     list={`item-suggestions-${item.id}`}
                     placeholder="品項名稱 (如: 雞翅)"
                     value={item.name}
                     onChange={(e) => handleUpdateItem(item.id, 'name', e.target.value)}
-                    className="font-black text-gray-800 border-b border-transparent focus:border-blue-200 outline-none flex-1 py-1"
+                    className="w-full min-w-0 font-black text-gray-800 border-b border-transparent focus:border-blue-200 outline-none py-1"
                   />
                   <datalist id={`item-suggestions-${item.id}`}>
                     {(supplierItemMap[data.merchant_name.trim().toLowerCase()] || allItemSuggestions).map((suggestion) => (
@@ -496,46 +496,46 @@ export default function EditReceiptPage() {
                   </div>
                   <button
                     onClick={() => handleRemoveItem(item.id)}
-                    className="text-gray-300 hover:text-red-500 ml-2"
+                    className="text-gray-300 hover:text-red-500 shrink-0"
                   >
                     <Trash2 size={18} />
                   </button>
                 </div>
-                <div className="flex items-center justify-between space-x-4">
-                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[auto_auto_1fr_auto] gap-3 items-center">
+                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 min-w-0">
                     <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">數量</span>
                     <input
                       type="number"
                       value={item.quantity}
                       onChange={(e) => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value))}
-                      className="w-12 bg-transparent py-1 outline-none text-center font-bold"
+                      className="w-full sm:w-12 bg-transparent py-1 outline-none text-center font-bold"
                     />
                   </div>
-                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-1">
+                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 min-w-0">
                     <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">單位</span>
                     <select
                       value={item.quantity_unit || "unit"}
                       onChange={(e) => handleUpdateItem(item.id, 'quantity_unit', e.target.value)}
-                      className="bg-transparent py-1 outline-none font-bold text-sm"
+                      className="w-full bg-transparent py-1 outline-none font-bold text-sm min-w-0"
                     >
                       <option value="unit">個</option>
                       <option value="kg">KG</option>
                       <option value="lb">Pound</option>
                     </select>
                   </div>
-                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-1 flex-1">
+                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 min-w-0">
                     <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">單價</span>
                     <span className="text-gray-600 font-bold mr-1">$</span>
                     <input
                       type="number"
                       value={item.unit_price}
                       onChange={(e) => handleUpdateItem(item.id, 'unit_price', parseFloat(e.target.value))}
-                      className="w-full bg-transparent py-1 outline-none font-bold"
+                      className="w-full min-w-0 bg-transparent py-1 outline-none font-bold"
                     />
                   </div>
-                  <div className="text-right min-w-[60px]">
+                  <div className="text-left sm:text-right min-w-0">
                     <div className="text-[10px] font-black text-gray-400 uppercase">小計</div>
-                    <div className="font-black text-gray-700">${(Number(item.unit_price) * Number(item.quantity || 1)).toLocaleString()}</div>
+                    <div className="font-black text-gray-700 break-all">${(Number(item.unit_price) * Number(item.quantity || 1)).toLocaleString()}</div>
                   </div>
                 </div>
               </div>
@@ -558,10 +558,10 @@ export default function EditReceiptPage() {
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full bg-blue-600 text-white rounded-2xl py-5 flex items-center justify-center space-x-3 shadow-2xl shadow-blue-200 active:scale-95 transition-all disabled:opacity-50"
+          className="w-full bg-blue-600 text-white rounded-2xl py-4 sm:py-5 px-4 flex items-center justify-center space-x-3 shadow-2xl shadow-blue-200 active:scale-95 transition-all disabled:opacity-50"
         >
           {loading ? <Loader2 className="animate-spin" size={24} /> : <CheckCircle2 size={24} />}
-          <span className="font-black text-xl">確認並儲存至資料庫</span>
+          <span className="font-black text-base sm:text-xl text-center">確認並儲存至資料庫</span>
         </button>
       </footer>
     </div>
