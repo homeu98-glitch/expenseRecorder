@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { randomUUID } from 'crypto';
 
 type ReceiptItemInput = {
   name: string;
@@ -7,10 +8,32 @@ type ReceiptItemInput = {
   quantity?: number;
 };
 
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+  if (!match) {
+    throw new Error('Invalid image data');
+  }
+
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], 'base64'),
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { receiptId, userId, merchant_name, receipt_number, date, total_amount, items } = body;
+    const {
+      receiptId,
+      userId,
+      merchant_name,
+      receipt_number,
+      date,
+      total_amount,
+      items,
+      image_data_url,
+      image_url,
+    } = body;
 
     if (!userId || !merchant_name || !date) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -25,11 +48,30 @@ export async function POST(request: Request) {
 
     if (mError) throw mError;
 
+    let savedImagePath: string | null = typeof image_url === 'string' && image_url.trim() ? image_url : null;
+
+    if (typeof image_data_url === 'string' && image_data_url.startsWith('data:')) {
+      const { mimeType, buffer } = parseDataUrl(image_data_url);
+      const extension = mimeType.includes('png') ? 'png' : 'jpg';
+      const filePath = `${userId}/${Date.now()}-${randomUUID()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(filePath, buffer, {
+          contentType: mimeType,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+      savedImagePath = filePath;
+    }
+
     const receiptPayload = {
       user_id: userId,
       merchant_id: merchant.id,
       total_amount: total_amount,
       receipt_date: date,
+      image_url: savedImagePath,
       raw_ocr_data: receipt_number ? { receipt_number } : null,
     };
 

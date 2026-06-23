@@ -13,6 +13,8 @@ export type ReceiptDraft = {
   date: string;
   total_amount: number;
   items: ReceiptDraftItem[];
+  image_data_url?: string;
+  image_url?: string;
 };
 
 export const TEMP_RECEIPT_STORAGE_KEY = "temp_receipt";
@@ -194,6 +196,14 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
     date: normalizeDate(getFirstDefined(payload, ["date", "receipt_date", "transaction_date"])),
     total_amount: totalAmount > 0 ? totalAmount : calculatedTotal,
     items,
+    image_data_url:
+      typeof getFirstDefined(payload, ["image_data_url", "imageDataUrl"]) === "string"
+        ? String(getFirstDefined(payload, ["image_data_url", "imageDataUrl"]))
+        : undefined,
+    image_url:
+      typeof getFirstDefined(payload, ["image_url", "imageUrl"]) === "string"
+        ? String(getFirstDefined(payload, ["image_url", "imageUrl"]))
+        : undefined,
   };
 }
 

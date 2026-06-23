@@ -17,18 +17,23 @@ import {
   type ReportReceipt,
 } from "@/lib/reporting";
 
-const timeFilters: Array<{ id: DashboardFilter; label: string }> = [
+type HomeFilter = DashboardFilter | "custom";
+
+const timeFilters: Array<{ id: HomeFilter; label: string }> = [
   { id: 'today', label: '今日' },
   { id: 'week', label: '本週' },
   { id: 'month', label: '本月' },
+  { id: 'custom', label: '自訂' },
 ];
 
 export default function Home() {
-  const [filter, setFilter] = useState<DashboardFilter>('today');
+  const [filter, setFilter] = useState<HomeFilter>('today');
   const [searchQuery, setSearchQuery] = useState("");
   const [user] = useState<{ id: string; shop_name: string } | null>(() => getShopUser());
   const [loading, setLoading] = useState(() => Boolean(getShopUser()?.id));
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
+  const [customStartDate, setCustomStartDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().split("T")[0]);
 
   const fetchDashboardData = async (userId: string) => {
     setLoading(true);
@@ -66,7 +71,16 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [user]);
 
-  const filteredReceipts = useMemo(() => filterReceiptsByDate(receipts, filter), [receipts, filter]);
+  const filteredReceipts = useMemo(() => {
+    if (filter !== "custom") {
+      return filterReceiptsByDate(receipts, filter);
+    }
+
+    return receipts.filter((receipt) => {
+      const value = receipt.receipt_date;
+      return value >= customStartDate && value <= customEndDate;
+    });
+  }, [receipts, filter, customStartDate, customEndDate]);
   const recentUploads = useMemo(() => receipts.slice(0, 5), [receipts]);
   const trendSummary = useMemo(() => buildTrendSummary(filteredReceipts), [filteredReceipts]);
   const stats = useMemo(() => ({
@@ -111,6 +125,28 @@ export default function Home() {
             </button>
           ))}
         </div>
+        {filter === "custom" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="card p-4 space-y-2">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">開始日期</label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="w-full bg-transparent border-b border-gray-100 py-2 outline-none focus:border-blue-500 font-bold"
+              />
+            </div>
+            <div className="card p-4 space-y-2">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">結束日期</label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="w-full bg-transparent border-b border-gray-100 py-2 outline-none focus:border-blue-500 font-bold"
+              />
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Quick Stats (Interactive Cards) */}
@@ -150,7 +186,7 @@ export default function Home() {
           className="w-full bg-white border border-gray-100 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-blue-500 shadow-sm focus:shadow-md transition-all text-sm font-medium"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (window.location.href = `/reports?q=${searchQuery}`)}
+          onKeyDown={(e) => e.key === 'Enter' && (window.location.href = `/reports?view=items&q=${encodeURIComponent(searchQuery.trim())}`)}
         />
       </div>
 

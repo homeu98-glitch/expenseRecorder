@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
@@ -29,6 +29,19 @@ export default function EditReceiptPage() {
   const routeId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ReceiptDraft>(createEmptyReceiptDraft);
+  const [supplierSuggestions, setSupplierSuggestions] = useState<string[]>([]);
+  const [allItemSuggestions, setAllItemSuggestions] = useState<string[]>([]);
+  const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
+
+  const receiptImageSrc = useMemo(() => {
+    if (data.image_data_url) {
+      return data.image_data_url;
+    }
+    if (!data.image_url) {
+      return null;
+    }
+    return supabase.storage.from("receipts").getPublicUrl(data.image_url).data.publicUrl;
+  }, [data.image_data_url, data.image_url]);
 
   useEffect(() => {
     if (!routeId) {
@@ -66,6 +79,7 @@ export default function EditReceiptPage() {
             id,
             receipt_date,
             total_amount,
+            image_url,
             raw_ocr_data,
             merchants(name),
             receipt_items(id, name, quantity, unit_price)
@@ -85,6 +99,7 @@ export default function EditReceiptPage() {
           receipt_number: receipt.raw_ocr_data?.receipt_number,
           date: receipt.receipt_date,
           total_amount: receipt.total_amount,
+          image_url: receipt.image_url,
           items: receipt.receipt_items,
         }));
       } catch (error: unknown) {
@@ -92,6 +107,65 @@ export default function EditReceiptPage() {
       }
     })();
   }, [routeId]);
+
+  useEffect(() => {
+    const shopUser = getShopUser();
+    if (!shopUser?.id) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const [{ data: merchants }, { data: receipts }] = await Promise.all([
+          supabase.from("merchants").select("name").eq("user_id", shopUser.id).order("name"),
+          supabase
+            .from("receipts")
+            .select(`
+              merchants(name),
+              receipt_items(name)
+            `)
+            .eq("user_id", shopUser.id),
+        ]);
+
+        const merchantNames = Array.from(
+          new Set((merchants ?? []).map((merchant) => merchant.name).filter(Boolean))
+        ) as string[];
+        const allItems = new Set<string>();
+        const itemMap = new Map<string, Set<string>>();
+
+        (receipts ?? []).forEach((receipt) => {
+          const merchantRelation = receipt.merchants as { name?: string } | Array<{ name?: string }> | null;
+          const merchantName = Array.isArray(merchantRelation)
+            ? merchantRelation[0]?.name
+            : merchantRelation?.name;
+          const merchantKey = merchantName?.trim().toLowerCase();
+          const itemSet = merchantKey ? itemMap.get(merchantKey) ?? new Set<string>() : null;
+
+          (receipt.receipt_items ?? []).forEach((item: { name?: string }) => {
+            if (!item.name?.trim()) return;
+            allItems.add(item.name.trim());
+            if (itemSet) {
+              itemSet.add(item.name.trim());
+            }
+          });
+
+          if (merchantKey && itemSet) {
+            itemMap.set(merchantKey, itemSet);
+          }
+        });
+
+        setSupplierSuggestions(merchantNames);
+        setAllItemSuggestions(Array.from(allItems).sort());
+        setSupplierItemMap(
+          Object.fromEntries(
+            Array.from(itemMap.entries()).map(([merchant, items]) => [merchant, Array.from(items).sort()])
+          )
+        );
+      } catch (error: unknown) {
+        console.error("Error loading shop history:", error);
+      }
+    })();
+  }, []);
 
   const handleUpdateItem = (
     id: number,
@@ -160,15 +234,26 @@ export default function EditReceiptPage() {
       <div className="space-y-4">
         {/* Basic Info */}
         <section className="card space-y-4 border-l-4 border-l-blue-600">
+          {receiptImageSrc && (
+            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-900">
+              <img src={receiptImageSrc} alt="掃描收據" className="w-full max-h-[40vh] object-contain" />
+            </div>
+          )}
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">供應商名稱</label>
             <input
               type="text"
+              list="supplier-suggestions"
               value={data.merchant_name}
               onChange={(e) => setData({...data, merchant_name: e.target.value})}
               className="w-full text-lg font-black border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all"
               placeholder="輸入店名..."
             />
+            <datalist id="supplier-suggestions">
+              {supplierSuggestions.map((supplier) => (
+                <option key={supplier} value={supplier} />
+              ))}
+            </datalist>
           </div>
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">收據編號</label>
@@ -237,13 +322,21 @@ export default function EditReceiptPage() {
             {data.items.map((item) => (
               <div key={item.id} className="card p-4 space-y-4 relative group hover:border-blue-200 transition-all">
                 <div className="flex justify-between items-start">
+                  <div className="flex-1">
                   <input
                     type="text"
+                    list={`item-suggestions-${item.id}`}
                     placeholder="品項名稱 (如: 雞翅)"
                     value={item.name}
                     onChange={(e) => handleUpdateItem(item.id, 'name', e.target.value)}
                     className="font-black text-gray-800 border-b border-transparent focus:border-blue-200 outline-none flex-1 py-1"
                   />
+                  <datalist id={`item-suggestions-${item.id}`}>
+                    {(supplierItemMap[data.merchant_name.trim().toLowerCase()] || allItemSuggestions).map((suggestion) => (
+                      <option key={`${item.id}-${suggestion}`} value={suggestion} />
+                    ))}
+                  </datalist>
+                  </div>
                   <button
                     onClick={() => handleRemoveItem(item.id)}
                     className="text-gray-300 hover:text-red-500 ml-2"

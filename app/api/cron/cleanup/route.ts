@@ -10,19 +10,27 @@ export async function GET(request: Request) {
   }
 
   try {
-    const sixtyDaysAgo = subDays(new Date(), 60).toISOString();
+    const fiftyDaysAgo = subDays(new Date(), 50).toISOString();
 
-    // 1. Find receipts older than 60 days with images
+    // 1. Find receipts older than 50 days with images
     const { data: receipts, error } = await supabase
       .from('receipts')
       .select('image_url')
-      .lt('created_at', sixtyDaysAgo)
+      .lt('created_at', fiftyDaysAgo)
       .not('image_url', 'is', null);
 
     if (error) throw error;
 
     if (receipts && receipts.length > 0) {
-      const filePaths = receipts.map(r => r.image_url?.split('/').pop()).filter(Boolean) as string[];
+      const filePaths = receipts
+        .map((r) => {
+          if (!r.image_url) return null;
+          if (r.image_url.includes('/object/public/receipts/')) {
+            return r.image_url.split('/object/public/receipts/')[1] || null;
+          }
+          return r.image_url;
+        })
+        .filter(Boolean) as string[];
 
       // 2. Delete from Supabase Storage
       const { error: storageError } = await supabase.storage
@@ -35,13 +43,16 @@ export async function GET(request: Request) {
       const { error: dbError } = await supabase
         .from('receipts')
         .update({ image_url: null })
-        .lt('created_at', sixtyDaysAgo);
+        .lt('created_at', fiftyDaysAgo);
 
       if (dbError) throw dbError;
     }
 
     return NextResponse.json({ success: true, count: receipts?.length || 0 });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
