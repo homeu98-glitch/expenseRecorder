@@ -42,7 +42,7 @@ async function compressImage(file: File): Promise<{ previewUrl: string; mimeType
 }
 
 export default function UploadPage() {
-  const [mode, setMode] = useState<'selection' | 'preview' | 'manual'>('selection');
+  const [mode, setMode] = useState<'selection' | 'preview'>('selection');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [previewMimeType, setPreviewMimeType] = useState<string>("image/jpeg");
@@ -163,7 +163,18 @@ export default function UploadPage() {
           </div>
 
           <div
-            onClick={() => setMode('manual')}
+            onClick={() => {
+              persistReceiptDraft({
+                merchant_name: "",
+                date: new Date().toISOString().split('T')[0],
+                items: [],
+                total_amount: 0,
+                receipt_number: "",
+                payment_method: "on_delivery",
+                payment_status: "unpaid",
+              });
+              window.location.href = "/edit/new?source=manual";
+            }}
             className="card p-8 flex flex-col items-center justify-center space-y-4 hover:border-green-400 hover:bg-green-50 transition-all cursor-pointer group"
           >
             <div className="bg-green-100 p-6 rounded-full text-green-600 group-hover:scale-110 transition-transform">
@@ -208,40 +219,6 @@ export default function UploadPage() {
               </>
             )}
           </button>
-        </div>
-      )}
-
-      {mode === 'manual' && (
-        <div className="card p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-           <h3 className="font-black text-xl text-gray-800 border-b border-gray-100 pb-3">手動新增記錄</h3>
-           <div className="space-y-5">
-              <div>
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">供應商名稱</label>
-                <input id="manual_merchant" type="text" className="w-full bg-gray-50 border-b-2 border-gray-100 py-3 px-2 outline-none focus:border-blue-500 transition-all font-bold text-lg" placeholder="例如: 興發食材" />
-              </div>
-              <div>
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">交易日期</label>
-                <input id="manual_date" type="date" className="w-full bg-gray-50 border-b-2 border-gray-100 py-3 px-2 outline-none focus:border-blue-500 transition-all font-bold" defaultValue={new Date().toISOString().split('T')[0]} />
-              </div>
-              <button
-                onClick={() => {
-                  const m = (document.getElementById('manual_merchant') as HTMLInputElement).value;
-                  const d = (document.getElementById('manual_date') as HTMLInputElement).value;
-                  if (!m) return alert("請輸入供應商名稱");
-                  persistReceiptDraft({ merchant_name: m, date: d, items: [], total_amount: 0, receipt_number: "" });
-                  window.location.href = "/edit/new?source=manual";
-                }}
-                className="w-full bg-blue-600 text-white rounded-2xl py-4 font-black text-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
-              >
-                繼續填寫明細
-              </button>
-              <button
-                onClick={() => setMode('selection')}
-                className="w-full text-gray-400 text-sm font-bold py-2 hover:text-gray-600"
-              >
-                返回選擇
-              </button>
-           </div>
         </div>
       )}
 

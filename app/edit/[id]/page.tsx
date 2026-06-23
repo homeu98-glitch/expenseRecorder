@@ -17,6 +17,8 @@ function createEmptyReceiptDraft(): ReceiptDraft {
   return {
     merchant_name: "",
     receipt_number: "",
+    payment_method: "on_delivery",
+    payment_status: "unpaid",
     date: new Date().toISOString().split("T")[0],
     total_amount: 0,
     items: [],
@@ -97,6 +99,8 @@ export default function EditReceiptPage() {
         setData(normalizeReceiptDraft({
           merchant_name: merchantName,
           receipt_number: receipt.raw_ocr_data?.receipt_number,
+          payment_method: receipt.raw_ocr_data?.payment_method,
+          payment_status: receipt.raw_ocr_data?.payment_status,
           date: receipt.receipt_date,
           total_amount: receipt.total_amount,
           image_url: receipt.image_url,
@@ -219,6 +223,29 @@ export default function EditReceiptPage() {
     }
   };
 
+  const handleDelete = async () => {
+    const user = getShopUser();
+    if (!user || !routeId || routeId === "new") return;
+    if (!confirm("確定要刪除此收據嗎？此操作無法復原。")) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/db/receipt/${routeId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) throw new Error("刪除失敗");
+      alert("收據已刪除");
+      router.push("/");
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : "刪除失敗");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-24 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
@@ -264,6 +291,31 @@ export default function EditReceiptPage() {
               className="w-full font-bold border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all"
               placeholder="如收據上有編號，請在此確認"
             />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">付款方式</label>
+              <select
+                value={data.payment_method || "on_delivery"}
+                onChange={(e) => setData({ ...data, payment_method: e.target.value })}
+                className="w-full font-bold border-b border-gray-100 py-2 outline-none focus:border-blue-500 bg-transparent"
+              >
+                <option value="on_delivery">交貨付款</option>
+                <option value="monthly">月結</option>
+                <option value="pay_later">稍後付款</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">付款狀態</label>
+              <select
+                value={data.payment_status || "unpaid"}
+                onChange={(e) => setData({ ...data, payment_status: e.target.value })}
+                className="w-full font-bold border-b border-gray-100 py-2 outline-none focus:border-blue-500 bg-transparent"
+              >
+                <option value="unpaid">未付款</option>
+                <option value="paid">已付款</option>
+              </select>
+            </div>
           </div>
           <div className="flex space-x-6">
             <div className="flex-1">
@@ -376,6 +428,16 @@ export default function EditReceiptPage() {
       </div>
 
       <footer className="pt-8">
+        {routeId !== "new" && (
+          <button
+            onClick={handleDelete}
+            disabled={loading}
+            className="w-full mb-3 border border-red-200 text-red-600 rounded-2xl py-4 flex items-center justify-center space-x-2 hover:bg-red-50 transition-all disabled:opacity-50"
+          >
+            <Trash2 size={20} />
+            <span className="font-black">刪除此收據</span>
+          </button>
+        )}
         <button
           onClick={handleSave}
           disabled={loading}

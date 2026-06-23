@@ -10,6 +10,8 @@ export type ReceiptDraftItem = {
 export type ReceiptDraft = {
   merchant_name: string;
   receipt_number?: string;
+  payment_method?: string;
+  payment_status?: string;
   date: string;
   total_amount: number;
   items: ReceiptDraftItem[];
@@ -193,6 +195,12 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
         "serial_number",
       ]) ?? ""
     ).trim() || undefined,
+    payment_method: String(
+      getFirstDefined(payload, ["payment_method"]) ?? ""
+    ).trim() || "on_delivery",
+    payment_status: String(
+      getFirstDefined(payload, ["payment_status"]) ?? ""
+    ).trim() || "unpaid",
     date: normalizeDate(getFirstDefined(payload, ["date", "receipt_date", "transaction_date"])),
     total_amount: totalAmount > 0 ? totalAmount : calculatedTotal,
     items,

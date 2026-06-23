@@ -1,0 +1,151 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { getShopUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import { normalizeReportReceipts, type ReportReceipt } from "@/lib/reporting";
+
+export default function PaymentsPage() {
+  const [user] = useState<{ id: string } | null>(() => getShopUser());
+  const [tab, setTab] = useState<"unpaid" | "paid">("unpaid");
+  const [loading, setLoading] = useState(() => Boolean(getShopUser()?.id));
+  const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
+
+  async function loadReceipts(userId: string) {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("receipts")
+        .select(`
+          id,
+          total_amount,
+          receipt_date,
+          created_at,
+          image_url,
+          raw_ocr_data,
+          merchants(name),
+          receipt_items(id, name, quantity, unit_price, total_price, created_at)
+        `)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setReceipts(normalizeReportReceipts(data));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const timer = window.setTimeout(() => {
+      void loadReceipts(user.id);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [user]);
+
+  const visibleReceipts = useMemo(
+    () => receipts.filter((receipt) => receipt.payment_status === tab),
+    [receipts, tab]
+  );
+
+  async function toggleStatus(receipt: ReportReceipt) {
+    if (!user?.id) return;
+    const nextStatus = receipt.payment_status === "paid" ? "unpaid" : "paid";
+    try {
+      const response = await fetch(`/api/db/receipt/${receipt.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, payment_status: nextStatus }),
+      });
+      if (!response.ok) throw new Error("更新付款狀態失敗");
+      setReceipts((current) =>
+        current.map((item) =>
+          item.id === receipt.id ? { ...item, payment_status: nextStatus } : item
+        )
+      );
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "更新付款狀態失敗");
+    }
+  }
+
+  return (
+    <div className="space-y-6 pb-24">
+      <header className="flex items-center space-x-4">
+        <Link href="/" className="text-gray-500 hover:text-blue-600 transition-colors">
+          <ArrowLeft size={24} />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">付款管理</h1>
+          <p className="text-gray-500 text-sm">快速查看已付款與未付款收據</p>
+        </div>
+      </header>
+
+      <div className="flex bg-gray-100 p-1 rounded-xl">
+        {([
+          { id: "unpaid", label: "未付款" },
+          { id: "paid", label: "已付款" },
+        ] as const).map((option) => (
+          <button
+            key={option.id}
+            onClick={() => setTab(option.id)}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              tab === option.id ? "bg-white text-blue-600 shadow-sm" : "text-gray-500"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="card py-12 flex flex-col items-center justify-center text-gray-400">
+          <Loader2 className="animate-spin mb-2" size={28} />
+          <p className="text-sm font-medium">付款資料載入中...</p>
+        </div>
+      ) : visibleReceipts.length === 0 ? (
+        <div className="card py-10 text-center text-gray-400">目前沒有此狀態的收據。</div>
+      ) : (
+        <div className="space-y-3">
+          {visibleReceipts.map((receipt) => (
+            <div key={receipt.id} className="card p-4 flex items-center justify-between gap-4">
+              <Link href={`/edit/${receipt.id}`} className="flex-1 min-w-0">
+                <div className="font-bold">{receipt.merchant_name}</div>
+                <div className="text-xs text-gray-400">
+                  {receipt.receipt_date}
+                  {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
+                  {receipt.payment_method ? ` • ${receipt.payment_method}` : ""}
+                </div>
+                <div className="text-xs text-gray-500 mt-1 truncate">
+                  {receipt.items.map((item) => item.name).join("、")}
+                </div>
+              </Link>
+              <div className="text-right">
+                <div className="font-bold text-lg">${receipt.total_amount.toLocaleString()}</div>
+                <button
+                  onClick={() => void toggleStatus(receipt)}
+                  className={`mt-2 text-xs font-black px-3 py-1.5 rounded-full ${
+                    receipt.payment_status === "paid"
+                      ? "bg-green-50 text-green-600"
+                      : "bg-amber-50 text-amber-600"
+                  }`}
+                >
+                  {receipt.payment_status === "paid" ? (
+                    <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />已付款</span>
+                  ) : (
+                    <span className="inline-flex items-center"><Circle size={12} className="mr-1" />未付款</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

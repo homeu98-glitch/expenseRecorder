@@ -26,6 +26,9 @@ export type ReportReceipt = {
   created_at: string | null;
   total_amount: number;
   receipt_number: string | null;
+  payment_method: string;
+  payment_status: string;
+  image_url: string | null;
   items: ReportItemRow[];
 };
 
@@ -78,6 +81,17 @@ function getReceiptNumber(raw: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+function getRawValue(raw: unknown, key: string): string | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  const value = getFirstDefined(raw, [key]);
+  if (typeof value !== "string") {
+    return null;
+  }
+  return value.trim() || null;
 }
 
 function normalizeMerchantName(value: unknown): string {
@@ -139,6 +153,9 @@ export function normalizeReportReceipts(input: unknown): ReportReceipt[] {
       const receiptDate = normalizeDateString(row.receipt_date);
       const receiptNumber = getReceiptNumber(row.raw_ocr_data);
       const createdAt = typeof row.created_at === "string" ? row.created_at : null;
+      const paymentMethod = getRawValue(row.raw_ocr_data, "payment_method") ?? "on_delivery";
+      const paymentStatus = getRawValue(row.raw_ocr_data, "payment_status") ?? "unpaid";
+      const imageUrl = typeof row.image_url === "string" ? row.image_url : null;
 
       const items = receiptItems
         .map((item): ReportItemRow | null => {
@@ -173,6 +190,9 @@ export function normalizeReportReceipts(input: unknown): ReportReceipt[] {
         created_at: createdAt,
         total_amount: normalizeNumber(row.total_amount, 0),
         receipt_number: receiptNumber,
+        payment_method: paymentMethod,
+        payment_status: paymentStatus,
+        image_url: imageUrl,
         items,
       };
     })

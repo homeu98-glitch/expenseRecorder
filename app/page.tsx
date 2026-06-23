@@ -90,6 +90,26 @@ export default function Home() {
     down: trendSummary.down,
   }), [filteredReceipts, trendSummary]);
 
+  async function togglePaymentStatus(receiptId: string, currentStatus: string) {
+    if (!user?.id) return;
+    const nextStatus = currentStatus === "paid" ? "unpaid" : "paid";
+    try {
+      const response = await fetch(`/api/db/receipt/${receiptId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, payment_status: nextStatus }),
+      });
+      if (!response.ok) throw new Error("更新付款狀態失敗");
+      setReceipts((current) =>
+        current.map((receipt) =>
+          receipt.id === receiptId ? { ...receipt, payment_status: nextStatus } : receipt
+        )
+      );
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : "更新付款狀態失敗");
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -215,26 +235,33 @@ export default function Home() {
           ) : (
             <div className="space-y-3">
               {recentUploads.map((item) => (
-                <Link key={item.id} href={`/edit/${item.id}`} className="card flex items-center justify-between p-4 hover:bg-gray-50 transition-all active:scale-[0.99] border-l-4 border-l-blue-500">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xl">
+                <div key={item.id} className="card flex items-center justify-between p-4 border-l-4 border-l-blue-500 gap-4">
+                  <Link href={`/edit/${item.id}`} className="flex items-center space-x-4 flex-1 min-w-0">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xl shrink-0">
                       {item.merchant_name[0] || '?'}
                     </div>
-                    <div>
-                      <div className="font-bold text-gray-800">{item.merchant_name}</div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-gray-800 truncate">{item.merchant_name}</div>
                       <div className="text-xs text-gray-400 font-medium">
                         {item.receipt_date}
                         {item.receipt_number ? ` • #${item.receipt_number}` : ""}
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
+                  </Link>
+                  <div className="text-right shrink-0">
                     <div className="font-black text-gray-700 text-lg">${Number(item.total_amount).toLocaleString()}</div>
-                    <div className="text-[10px] font-bold text-blue-600 flex items-center justify-end">
-                      點擊查看 <ChevronRight size={10} />
-                    </div>
+                    <button
+                      onClick={() => void togglePaymentStatus(item.id, item.payment_status)}
+                      className={`mt-2 text-[10px] font-black px-3 py-1 rounded-full ${
+                        item.payment_status === "paid"
+                          ? "bg-green-50 text-green-600"
+                          : "bg-amber-50 text-amber-600"
+                      }`}
+                    >
+                      {item.payment_status === "paid" ? "已付款" : "未付款"}
+                    </button>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

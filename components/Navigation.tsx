@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, PlusCircle, BarChart2, Settings } from "lucide-react";
+import { Home, PlusCircle, BarChart2, Settings, Wallet } from "lucide-react";
 import { clsx } from "clsx";
 
 const navItems = [
   { href: "/", label: "首頁", icon: Home },
   { href: "/upload", label: "新增", icon: PlusCircle },
+  { href: "/payments", label: "付款", icon: Wallet },
   { href: "/reports", label: "報表", icon: BarChart2 },
   { href: "/settings", label: "設定", icon: Settings },
 ];

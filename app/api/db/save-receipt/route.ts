@@ -28,6 +28,8 @@ export async function POST(request: Request) {
       userId,
       merchant_name,
       receipt_number,
+      payment_method,
+      payment_status,
       date,
       total_amount,
       items,
@@ -72,7 +74,11 @@ export async function POST(request: Request) {
       total_amount: total_amount,
       receipt_date: date,
       image_url: savedImagePath,
-      raw_ocr_data: receipt_number ? { receipt_number } : null,
+      raw_ocr_data: {
+        receipt_number: receipt_number || null,
+        payment_method: payment_method || "on_delivery",
+        payment_status: payment_status || "unpaid",
+      },
     };
 
     // 2. Create or Update Receipt
