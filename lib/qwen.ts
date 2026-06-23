@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { normalizeReceiptDraft } from "@/lib/receipt";
 
 const ALIBABA_API_KEY = "sk-ws-H.IXDYIY.AsyA.MEYCIQDkZTgllWaNkLyces_ArV7RlWeQnngAOKsj8VX2vyDUHgIhAKTVwFR61fOt16D9b8BZYVKSSrwTaLzWPIqZesmbS54l";
 const ALIBABA_BASE_URL = "https://ws-vf1nz0yy8t6dp30m.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1";
@@ -49,21 +50,10 @@ export async function processReceiptWithQwen(base64Image: string, mimeType: stri
 
     // Cleanup: sometimes AI returns JSON wrapped in markdown even with response_format
     const cleanJson = content.replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(cleanJson);
-
-    // Final Normalization before returning
-    return {
-      merchant_name: parsed.merchant_name || parsed.store_name || "未知供應商",
-      date: parsed.date || new Date().toISOString().split('T')[0],
-      total_amount: Number(parsed.total_amount) || 0,
-      items: (parsed.items || []).map((it: any) => ({
-        name: it.name || it.item_name || "未知品項",
-        quantity: parseFloat(it.quantity) || 1,
-        unit_price: parseFloat(it.unit_price) || parseFloat(it.price) || 0
-      }))
-    };
-  } catch (err: any) {
+    const parsed = JSON.parse(cleanJson) as unknown;
+    return normalizeReceiptDraft(parsed);
+  } catch (err: unknown) {
     console.error("Alibaba Qwen OCR Error:", err);
-    throw err;
+    throw err instanceof Error ? err : new Error("AI 識別失敗");
   }
 }

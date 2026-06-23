@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Camera, Upload, Loader2, CheckCircle2, AlertCircle, FileText, Keyboard, ArrowLeft } from "lucide-react";
+import { Camera, Upload, Loader2, AlertCircle, Keyboard, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { clsx } from "clsx";
+import { normalizeReceiptDraft } from "@/lib/receipt";
 
 export default function UploadPage() {
   const [mode, setMode] = useState<'selection' | 'preview' | 'manual'>('selection');
@@ -44,15 +44,21 @@ export default function UploadPage() {
         body: JSON.stringify({ image: base64, mimeType: file.type })
       });
 
-      if (!response.ok) throw new Error("AI 識別失敗，請檢查網路或 API Key");
-
       const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "AI 識別失敗，請檢查網路或 API Key");
+      }
+
+      const normalized = normalizeReceiptDraft(result);
+      if (normalized.merchant_name === "未知供應商" && normalized.items.length === 0 && normalized.total_amount <= 0) {
+        throw new Error("AI 未能辨識出有效的收據內容，請嘗試更清晰的圖片。");
+      }
 
       // 3. Store result in session storage temporarily for the edit page
-      sessionStorage.setItem('temp_receipt', JSON.stringify(result));
+      sessionStorage.setItem('temp_receipt', JSON.stringify(normalized));
       router.push("/edit/new?source=ai");
-    } catch (err: any) {
-      setError(err.message || "處理收據時出錯，請重試。");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "處理收據時出錯，請重試。");
       console.error(err);
     } finally {
       setLoading(false);

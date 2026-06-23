@@ -1,58 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
+import { normalizeReceiptDraft, type ReceiptDraft, type ReceiptDraftItem } from "@/lib/receipt";
+
+function getInitialReceiptData(id: string): ReceiptDraft {
+  if (typeof window === "undefined" || id !== "new") {
+    return {
+      merchant_name: "",
+      date: new Date().toISOString().split("T")[0],
+      total_amount: 0,
+      items: [],
+    };
+  }
+
+  try {
+    const temp = sessionStorage.getItem("temp_receipt");
+    if (!temp) {
+      return {
+        merchant_name: "",
+        date: new Date().toISOString().split("T")[0],
+        total_amount: 0,
+        items: [],
+      };
+    }
+
+    return normalizeReceiptDraft(JSON.parse(temp) as unknown);
+  } catch (error: unknown) {
+    console.error("Error parsing AI data:", error);
+    return {
+      merchant_name: "",
+      date: new Date().toISOString().split("T")[0],
+      total_amount: 0,
+      items: [],
+    };
+  }
+}
 
 export default function EditReceiptPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any>({
-    merchant_name: "",
-    date: new Date().toISOString().split('T')[0],
-    total_amount: 0,
-    items: []
-  });
+  const [data, setData] = useState<ReceiptDraft>(() => getInitialReceiptData(params.id));
 
-  useEffect(() => {
-    // 1. Load from session storage if "new"
-    if (params.id === 'new') {
-      const temp = sessionStorage.getItem('temp_receipt');
-      if (temp) {
-        try {
-          const parsed = JSON.parse(temp);
-          console.log("Loading AI Data:", parsed);
-
-          // Qwen/AI might return items in a nested structure or directly
-          const rawItems = parsed.items || [];
-          const normalizedItems = rawItems.map((it: any, i: number) => ({
-            id: it.id || Date.now() + i,
-            name: it.name || it.item_name || "",
-            quantity: Number(it.quantity) || 1,
-            unit_price: Number(it.unit_price) || Number(it.price) || 0
-          }));
-
-          setData({
-            merchant_name: parsed.merchant_name || parsed.store_name || "",
-            date: parsed.date || new Date().toISOString().split('T')[0],
-            total_amount: Number(parsed.total_amount) || normalizedItems.reduce((acc: number, item: any) => acc + (item.unit_price * item.quantity), 0),
-            items: normalizedItems
-          });
-        } catch (e) {
-          console.error("Error parsing AI data:", e);
-        }
-      }
-    }
-  }, [params.id]);
-
-  const handleUpdateItem = (id: number, field: string, value: any) => {
-    const newItems = data.items.map((item: any) =>
+  const handleUpdateItem = (
+    id: number,
+    field: keyof Pick<ReceiptDraftItem, "name" | "quantity" | "unit_price">,
+    value: string | number
+  ) => {
+    const newItems = data.items.map((item) =>
       item.id === id ? { ...item, [field]: value } : item
     );
-    const newTotal = newItems.reduce((acc: number, item: any) => acc + (Number(item.unit_price) * Number(item.quantity || 1)), 0);
+    const newTotal = newItems.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity || 1)), 0);
     setData({ ...data, items: newItems, total_amount: newTotal });
   };
 
@@ -62,8 +62,8 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
   };
 
   const handleRemoveItem = (id: number) => {
-    const newItems = data.items.filter((it: any) => it.id !== id);
-    const newTotal = newItems.reduce((acc: number, item: any) => acc + (Number(item.unit_price) * Number(item.quantity || 1)), 0);
+    const newItems = data.items.filter((it) => it.id !== id);
+    const newTotal = newItems.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity || 1)), 0);
     setData({ ...data, items: newItems, total_amount: newTotal });
   };
 
@@ -88,8 +88,8 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
       alert("記錄已成功存入資料庫！");
       sessionStorage.removeItem('temp_receipt');
       router.push("/");
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "儲存失敗");
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
                 尚未加入任何品項
               </div>
             )}
-            {data.items.map((item: any) => (
+            {data.items.map((item) => (
               <div key={item.id} className="card p-4 space-y-4 relative group hover:border-blue-200 transition-all">
                 <div className="flex justify-between items-start">
                   <input
