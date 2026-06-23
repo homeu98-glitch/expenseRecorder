@@ -2,9 +2,8 @@
 
 import { useState, useRef } from "react";
 import { Camera, Upload, Loader2, AlertCircle, Keyboard, ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { normalizeReceiptDraft } from "@/lib/receipt";
+import { normalizeReceiptDraft, persistReceiptDraft } from "@/lib/receipt";
 
 export default function UploadPage() {
   const [mode, setMode] = useState<'selection' | 'preview' | 'manual'>('selection');
@@ -13,7 +12,6 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -54,9 +52,9 @@ export default function UploadPage() {
         throw new Error("AI 未能辨識出有效的收據內容，請嘗試更清晰的圖片。");
       }
 
-      // 3. Store result in session storage temporarily for the edit page
-      sessionStorage.setItem('temp_receipt', JSON.stringify(normalized));
-      router.push("/edit/new?source=ai");
+      // 3. Store result locally for the edit page
+      persistReceiptDraft(normalized);
+      window.location.href = "/edit/new?source=ai";
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "處理收據時出錯，請重試。");
       console.error(err);
@@ -165,8 +163,8 @@ export default function UploadPage() {
                   const m = (document.getElementById('manual_merchant') as HTMLInputElement).value;
                   const d = (document.getElementById('manual_date') as HTMLInputElement).value;
                   if (!m) return alert("請輸入供應商名稱");
-                  sessionStorage.setItem('temp_receipt', JSON.stringify({ merchant_name: m, date: d, items: [], total_amount: 0 }));
-                  router.push("/edit/new?source=manual");
+                  persistReceiptDraft({ merchant_name: m, date: d, items: [], total_amount: 0 });
+                  window.location.href = "/edit/new?source=manual";
                 }}
                 className="w-full bg-blue-600 text-white rounded-2xl py-4 font-black text-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
               >

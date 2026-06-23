@@ -14,6 +14,8 @@ export type ReceiptDraft = {
   items: ReceiptDraftItem[];
 };
 
+export const TEMP_RECEIPT_STORAGE_KEY = "temp_receipt";
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -181,4 +183,39 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
     total_amount: totalAmount > 0 ? totalAmount : calculatedTotal,
     items,
   };
+}
+
+export function persistReceiptDraft(draft: ReceiptDraft) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const serialized = JSON.stringify(draft);
+  window.sessionStorage.setItem(TEMP_RECEIPT_STORAGE_KEY, serialized);
+  window.localStorage.setItem(TEMP_RECEIPT_STORAGE_KEY, serialized);
+}
+
+export function readPersistedReceiptDraft(): ReceiptDraft | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored =
+    window.sessionStorage.getItem(TEMP_RECEIPT_STORAGE_KEY) ??
+    window.localStorage.getItem(TEMP_RECEIPT_STORAGE_KEY);
+
+  if (!stored) {
+    return null;
+  }
+
+  return normalizeReceiptDraft(JSON.parse(stored) as unknown);
+}
+
+export function clearPersistedReceiptDraft() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem(TEMP_RECEIPT_STORAGE_KEY);
+  window.localStorage.removeItem(TEMP_RECEIPT_STORAGE_KEY);
 }

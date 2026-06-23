@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
-import { normalizeReceiptDraft, type ReceiptDraft, type ReceiptDraftItem } from "@/lib/receipt";
+import {
+  readPersistedReceiptDraft,
+  clearPersistedReceiptDraft,
+  type ReceiptDraft,
+  type ReceiptDraftItem,
+} from "@/lib/receipt";
 
 function createEmptyReceiptDraft(): ReceiptDraft {
   return {
@@ -26,12 +31,11 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
     }
 
     try {
-      const temp = sessionStorage.getItem("temp_receipt");
-      if (!temp) {
+      const normalized = readPersistedReceiptDraft();
+      if (!normalized) {
         return;
       }
 
-      const normalized = normalizeReceiptDraft(JSON.parse(temp) as unknown);
       const timer = window.setTimeout(() => {
         setData(normalized);
       }, 0);
@@ -84,7 +88,7 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
       if (!response.ok) throw new Error("儲存失敗");
 
       alert("記錄已成功存入資料庫！");
-      sessionStorage.removeItem('temp_receipt');
+      clearPersistedReceiptDraft();
       router.push("/");
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "儲存失敗");
