@@ -1,48 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
 import { normalizeReceiptDraft, type ReceiptDraft, type ReceiptDraftItem } from "@/lib/receipt";
 
-function getInitialReceiptData(id: string): ReceiptDraft {
-  if (typeof window === "undefined" || id !== "new") {
-    return {
-      merchant_name: "",
-      date: new Date().toISOString().split("T")[0],
-      total_amount: 0,
-      items: [],
-    };
-  }
-
-  try {
-    const temp = sessionStorage.getItem("temp_receipt");
-    if (!temp) {
-      return {
-        merchant_name: "",
-        date: new Date().toISOString().split("T")[0],
-        total_amount: 0,
-        items: [],
-      };
-    }
-
-    return normalizeReceiptDraft(JSON.parse(temp) as unknown);
-  } catch (error: unknown) {
-    console.error("Error parsing AI data:", error);
-    return {
-      merchant_name: "",
-      date: new Date().toISOString().split("T")[0],
-      total_amount: 0,
-      items: [],
-    };
-  }
+function createEmptyReceiptDraft(): ReceiptDraft {
+  return {
+    merchant_name: "",
+    date: new Date().toISOString().split("T")[0],
+    total_amount: 0,
+    items: [],
+  };
 }
 
 export default function EditReceiptPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ReceiptDraft>(() => getInitialReceiptData(params.id));
+  const [data, setData] = useState<ReceiptDraft>(createEmptyReceiptDraft);
+
+  useEffect(() => {
+    if (params.id !== "new") {
+      return;
+    }
+
+    try {
+      const temp = sessionStorage.getItem("temp_receipt");
+      if (!temp) {
+        return;
+      }
+
+      const normalized = normalizeReceiptDraft(JSON.parse(temp) as unknown);
+      const timer = window.setTimeout(() => {
+        setData(normalized);
+      }, 0);
+
+      return () => window.clearTimeout(timer);
+    } catch (error: unknown) {
+      console.error("Error parsing AI data:", error);
+    }
+  }, [params.id]);
 
   const handleUpdateItem = (
     id: number,
