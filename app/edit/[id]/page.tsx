@@ -7,6 +7,7 @@ import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import { playSuccessSound, playPaidSound } from "@/lib/feedback";
+import { readShopPresets } from "@/lib/presets";
 import {
   normalizeReceiptDraft,
   readPersistedReceiptDraft,
@@ -36,17 +37,35 @@ export default function EditReceiptPage() {
   const [supplierSuggestions, setSupplierSuggestions] = useState<string[]>([]);
   const [allItemSuggestions, setAllItemSuggestions] = useState<string[]>([]);
   const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
+  const [productPresetMap, setProductPresetMap] = useState<Record<string, { product_type?: string; default_unit?: string }>>({});
   const [showConfetti, setShowConfetti] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
 
-  const receiptImageSrc = useMemo(() => {
-    if (data.image_data_url) {
-      return data.image_data_url;
+  const receiptImageSrc = useMemo(
+    () => data.image_data_url || (data.image_url ? signedImageUrl : null),
+    [data.image_data_url, data.image_url, signedImageUrl]
+  );
+
+  useEffect(() => {
+    if (data.image_data_url || !data.image_url) {
+      return;
     }
-    if (!data.image_url) {
-      return null;
-    }
-    return supabase.storage.from("receipts").getPublicUrl(data.image_url).data.publicUrl;
+
+    let active = true;
+    void (async () => {
+      const { data: signed } = await supabase.storage.from("receipts").createSignedUrl(data.image_url!, 60 * 60);
+      if (!active) return;
+      if (signed?.signedUrl) {
+        setSignedImageUrl(signed.signedUrl);
+        return;
+      }
+      setSignedImageUrl(supabase.storage.from("receipts").getPublicUrl(data.image_url!).data.publicUrl);
+    })();
+
+    return () => {
+      active = false;
+    };
   }, [data.image_data_url, data.image_url]);
 
   useEffect(() => {
@@ -107,8 +126,13 @@ export default function EditReceiptPage() {
           payment_status: receipt.raw_ocr_data?.payment_status,
           date: receipt.receipt_date,
           total_amount: receipt.total_amount,
+          image_data_url: receipt.raw_ocr_data?.image_data_url,
           image_url: receipt.image_url,
-          items: receipt.receipt_items,
+          items: receipt.receipt_items.map((item: { id: string; name: string; quantity: number; unit_price: number }, index: number) => ({
+            ...item,
+            quantity_unit: receipt.raw_ocr_data?.item_metadata?.[index]?.quantity_unit,
+            product_type: receipt.raw_ocr_data?.item_metadata?.[index]?.product_type,
+          })),
         }));
       } catch (error: unknown) {
         console.error("Error loading receipt:", error);
@@ -138,8 +162,30 @@ export default function EditReceiptPage() {
         const merchantNames = Array.from(
           new Set((merchants ?? []).map((merchant) => merchant.name).filter(Boolean))
         ) as string[];
+        const presets = readShopPresets(shopUser.id);
         const allItems = new Set<string>();
         const itemMap = new Map<string, Set<string>>();
+        const presetMap = new Map<string, { product_type?: string; default_unit?: string }>();
+
+        presets.suppliers.forEach((supplier) => {
+          if (supplier.name?.trim()) {
+            merchantNames.push(supplier.name.trim());
+          }
+
+          const supplierKey = supplier.name.trim().toLowerCase();
+          const supplierItems = itemMap.get(supplierKey) ?? new Set<string>();
+          supplier.products.forEach((product) => {
+            if (!product.name?.trim()) return;
+            const productName = product.name.trim();
+            allItems.add(productName);
+            supplierItems.add(productName);
+            presetMap.set(`${supplierKey}::${productName.toLowerCase()}`, {
+              product_type: product.product_type,
+              default_unit: product.default_unit,
+            });
+          });
+          itemMap.set(supplierKey, supplierItems);
+        });
 
         (receipts ?? []).forEach((receipt) => {
           const merchantRelation = receipt.merchants as { name?: string } | Array<{ name?: string }> | null;
@@ -164,6 +210,7 @@ export default function EditReceiptPage() {
 
         setSupplierSuggestions(merchantNames);
         setAllItemSuggestions(Array.from(allItems).sort());
+        setProductPresetMap(Object.fromEntries(presetMap.entries()));
         setSupplierItemMap(
           Object.fromEntries(
             Array.from(itemMap.entries()).map(([merchant, items]) => [merchant, Array.from(items).sort()])
@@ -177,18 +224,33 @@ export default function EditReceiptPage() {
 
   const handleUpdateItem = (
     id: number,
-    field: keyof Pick<ReceiptDraftItem, "name" | "quantity" | "unit_price">,
+    field: keyof Pick<ReceiptDraftItem, "name" | "quantity" | "unit_price" | "quantity_unit" | "product_type">,
     value: string | number
   ) => {
-    const newItems = data.items.map((item) =>
-      item.id === id ? { ...item, [field]: value } : item
-    );
+    const merchantKey = data.merchant_name.trim().toLowerCase();
+    const newItems = data.items.map((item) => {
+      if (item.id !== id) {
+        return item;
+      }
+
+      const nextItem = { ...item, [field]: value };
+      if (field === "name" && typeof value === "string") {
+        const preset = productPresetMap[`${merchantKey}::${value.trim().toLowerCase()}`];
+        if (preset?.default_unit && !nextItem.quantity_unit) {
+          nextItem.quantity_unit = preset.default_unit;
+        }
+        if (preset?.product_type && !nextItem.product_type) {
+          nextItem.product_type = preset.product_type;
+        }
+      }
+      return nextItem;
+    });
     const newTotal = newItems.reduce((acc, item) => acc + (Number(item.unit_price) * Number(item.quantity || 1)), 0);
     setData({ ...data, items: newItems, total_amount: newTotal });
   };
 
   const handleAddItem = () => {
-    const newItem = { id: Date.now(), name: "", quantity: 1, unit_price: 0 };
+    const newItem = { id: Date.now(), name: "", quantity: 1, unit_price: 0, quantity_unit: "unit" };
     setData({ ...data, items: [...data.items, newItem] });
   };
 
@@ -448,6 +510,18 @@ export default function EditReceiptPage() {
                       onChange={(e) => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value))}
                       className="w-12 bg-transparent py-1 outline-none text-center font-bold"
                     />
+                  </div>
+                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-1">
+                    <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">單位</span>
+                    <select
+                      value={item.quantity_unit || "unit"}
+                      onChange={(e) => handleUpdateItem(item.id, 'quantity_unit', e.target.value)}
+                      className="bg-transparent py-1 outline-none font-bold text-sm"
+                    >
+                      <option value="unit">個</option>
+                      <option value="kg">KG</option>
+                      <option value="lb">Pound</option>
+                    </select>
                   </div>
                   <div className="flex items-center bg-gray-50 rounded-xl px-3 py-1 flex-1">
                     <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">單價</span>

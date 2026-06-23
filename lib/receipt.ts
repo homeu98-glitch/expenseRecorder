@@ -5,6 +5,8 @@ export type ReceiptDraftItem = {
   name: string;
   quantity: number;
   unit_price: number;
+  quantity_unit?: string;
+  product_type?: string;
 };
 
 export type ReceiptDraft = {
@@ -155,6 +157,12 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
         getFirstDefined(item, ["unit_price", "price", "amount", "subtotal", "total_price"]),
         0
       );
+      const quantityUnit = String(
+        getFirstDefined(item, ["quantity_unit", "unit", "measurement_unit"]) ?? ""
+      ).trim() || "unit";
+      const productType = String(
+        getFirstDefined(item, ["product_type", "category", "item_type"]) ?? ""
+      ).trim() || undefined;
 
       if (!name && unitPrice <= 0) {
         return null;
@@ -165,6 +173,8 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
         name: name || "未命名品項",
         quantity: quantity > 0 ? quantity : 1,
         unit_price: unitPrice,
+        quantity_unit: quantityUnit,
+        product_type: productType,
       };
     })
     .filter((item): item is ReceiptDraftItem => item !== null);

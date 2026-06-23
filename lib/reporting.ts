@@ -8,7 +8,11 @@ export type ReportItemRow = {
   id: string;
   name: string;
   quantity: number;
+  quantity_unit: string;
+  product_type: string | null;
   unit_price: number;
+  normalized_unit_price: number | null;
+  normalized_unit_label: string | null;
   total_price: number;
   receipt_id: string;
   receipt_date: string;
@@ -58,6 +62,16 @@ function normalizeNumber(value: unknown, fallback = 0): number {
   }
 
   return fallback;
+}
+
+function toNormalizedQuantity(quantity: number, unit: string) {
+  if (unit === "kg") {
+    return { value: quantity, label: "KG" };
+  }
+  if (unit === "lb") {
+    return { value: quantity * 0.453592, label: "KG" };
+  }
+  return null;
 }
 
 function getReceiptNumber(raw: unknown): string | null {
@@ -156,22 +170,36 @@ export function normalizeReportReceipts(input: unknown): ReportReceipt[] {
       const paymentMethod = getRawValue(row.raw_ocr_data, "payment_method") ?? "on_delivery";
       const paymentStatus = getRawValue(row.raw_ocr_data, "payment_status") ?? "unpaid";
       const imageUrl = typeof row.image_url === "string" ? row.image_url : null;
+      const itemMetadata = Array.isArray((row.raw_ocr_data as UnknownRecord | undefined)?.item_metadata)
+        ? ((row.raw_ocr_data as UnknownRecord).item_metadata as unknown[])
+        : [];
 
       const items = receiptItems
-        .map((item): ReportItemRow | null => {
+        .map((item, index): ReportItemRow | null => {
           if (!isRecord(item)) {
             return null;
           }
 
           const quantity = normalizeNumber(item.quantity, 1);
           const unitPrice = normalizeNumber(item.unit_price, 0);
+          const totalPrice = normalizeNumber(item.total_price, quantity * unitPrice);
+          const metadata = isRecord(itemMetadata[index]) ? itemMetadata[index] : null;
+          const quantityUnit = typeof metadata?.quantity_unit === "string" ? metadata.quantity_unit : "unit";
+          const productType = typeof metadata?.product_type === "string" ? metadata.product_type : null;
+          const normalizedQuantity = toNormalizedQuantity(quantity, quantityUnit);
 
           return {
             id: String(item.id ?? `${receiptId}-${item.name ?? "item"}`),
             name: normalizeMerchantName(item.name).replace(/^未知供應商$/, "未命名品項"),
             quantity,
+            quantity_unit: quantityUnit,
+            product_type: productType,
             unit_price: unitPrice,
-            total_price: normalizeNumber(item.total_price, quantity * unitPrice),
+            normalized_unit_price: normalizedQuantity && normalizedQuantity.value > 0
+              ? totalPrice / normalizedQuantity.value
+              : null,
+            normalized_unit_label: normalizedQuantity?.label ?? null,
+            total_price: totalPrice,
             receipt_id: receiptId,
             receipt_date: receiptDate,
             merchant_name: merchantName,
@@ -253,7 +281,7 @@ export function buildItemRows(receipts: ReportReceipt[]) {
 
   receipts.forEach((receipt) => {
     receipt.items.forEach((item) => {
-      const key = item.name.trim().toLowerCase();
+      const key = `${item.name.trim().toLowerCase()}::${item.normalized_unit_label ?? item.quantity_unit}`;
       if (!key) {
         return;
       }
@@ -279,7 +307,14 @@ export function buildItemRows(receipts: ReportReceipt[]) {
         return;
       }
 
-      const changePercent = ((item.unit_price - previous.unit_price) / previous.unit_price) * 100;
+      const currentPrice = item.normalized_unit_price ?? item.unit_price;
+      const previousPrice = previous.normalized_unit_price ?? previous.unit_price;
+      if (previousPrice === 0) {
+        rows.push({ ...item, change_percent: null, direction: "new" });
+        return;
+      }
+
+      const changePercent = ((currentPrice - previousPrice) / previousPrice) * 100;
       rows.push({
         ...item,
         change_percent: changePercent,
@@ -352,7 +387,7 @@ export function buildTrendSeries(receipts: ReportReceipt[]) {
     rows.forEach((row) => {
       uniqueDates.add(row.receipt_date);
       const current = dataByDate.get(row.receipt_date) ?? { date: format(new Date(row.receipt_date), "MM-dd") };
-      current[name] = row.unit_price;
+      current[name] = row.normalized_unit_price ?? row.unit_price;
       dataByDate.set(row.receipt_date, current);
     });
   });

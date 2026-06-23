@@ -351,7 +351,15 @@ export default function ReportsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-lg">${item.unit_price.toLocaleString()}</div>
+                    <div className="font-bold text-lg">
+                      $
+                      {(item.normalized_unit_price ?? item.unit_price).toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-bold">
+                      / {item.normalized_unit_label ?? item.quantity_unit.toUpperCase()}
+                    </div>
                     <div className={clsx("text-xs font-bold flex items-center justify-end", isUp ? "text-red-600" : isSame ? "text-gray-400" : item.direction === 'down' ? "text-green-600" : "text-blue-600")}>
                       {isUp ? <TrendingUp size={10} className="mr-0.5" /> : <TrendingDown size={10} className="mr-0.5" />}
                       {changeText}

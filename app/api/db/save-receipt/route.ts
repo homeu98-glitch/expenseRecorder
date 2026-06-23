@@ -6,6 +6,8 @@ type ReceiptItemInput = {
   name: string;
   unit_price: number;
   quantity?: number;
+  quantity_unit?: string;
+  product_type?: string;
 };
 
 function parseDataUrl(dataUrl: string) {
@@ -85,6 +87,12 @@ export async function POST(request: Request) {
         receipt_number: receipt_number || null,
         payment_method: payment_method || "on_delivery",
         payment_status: payment_status || "unpaid",
+        image_data_url: typeof image_data_url === "string" ? image_data_url : null,
+        item_metadata: (Array.isArray(items) ? (items as ReceiptItemInput[]) : []).map((item) => ({
+          name: item.name,
+          quantity_unit: item.quantity_unit || "unit",
+          product_type: item.product_type || null,
+        })),
       },
     };
 
