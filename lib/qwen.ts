@@ -19,12 +19,13 @@ export async function processReceiptWithQwen(base64Image: string, mimeType: stri
           content: `你是一個專業的繁體中文收據 OCR 系統。
           請仔細分析收據圖片，特別是針對复杂的對賬單或月結單：
           1. 提取商店名稱 (merchant_name)。
-          2. 提取收據日期 (date)，格式為 YYYY-MM-DD。如果是 26/05/26 這種格式，請理解為 DD/MM/YY 並轉換為西元 2026-05-26。
-          3. 提取總金額 (total_amount)。請找尋「合計金額」或「實付總額」。
-          4. 提取品項列表 (items)。
+          2. 如果收據上有單據編號、發票號碼、收據號碼或參考編號，請提取為 receipt_number。
+          3. 提取收據日期 (date)，格式為 YYYY-MM-DD。如果是 26/05/26 這種格式，請理解為 DD/MM/YY 並轉換為西元 2026-05-26。
+          4. 提取總金額 (total_amount)。請找尋「合計金額」或「實付總額」。
+          5. 提取品項列表 (items)。
              - 對於有「彙總」或「統計」區域的收據，請優先提取該區域的彙總品項。
              - 每個品項必須包含：名稱 (name)、數量 (quantity) 和單價 (unit_price)。
-          5. 必須僅輸出純 JSON 格式，不要包含任何 Markdown 標籤或額外文字。`
+          6. 必須僅輸出純 JSON 格式，不要包含任何 Markdown 標籤或額外文字。`
         },
         {
           role: "user",

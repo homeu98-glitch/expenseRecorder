@@ -9,6 +9,7 @@ export type ReceiptDraftItem = {
 
 export type ReceiptDraft = {
   merchant_name: string;
+  receipt_number?: string;
   date: string;
   total_amount: number;
   items: ReceiptDraftItem[];
@@ -179,6 +180,17 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
       getFirstDefined(payload, ["merchant_name", "store_name", "merchant", "vendor", "shop_name"]) ??
         "未知供應商"
     ).trim() || "未知供應商",
+    receipt_number: String(
+      getFirstDefined(payload, [
+        "receipt_number",
+        "receipt_no",
+        "invoice_number",
+        "invoice_no",
+        "document_number",
+        "document_no",
+        "serial_number",
+      ]) ?? ""
+    ).trim() || undefined,
     date: normalizeDate(getFirstDefined(payload, ["date", "receipt_date", "transaction_date"])),
     total_amount: totalAmount > 0 ? totalAmount : calculatedTotal,
     items,

@@ -1,63 +1,71 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-
-// Mock data generator for items when needed
-const CATEGORIES = ['食材', '肉類', '蔬菜', '雜貨', '飲品', '清潔用品'];
+import {
+  buildItemRows,
+  buildTrendSummary,
+  filterReceiptsByDate,
+  normalizeReportReceipts,
+  type DashboardFilter,
+} from '@/lib/reporting';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type'); // 'receipts', 'items', 'summary'
-  const filter = searchParams.get('filter') || 'today';
-  const query = searchParams.get('q'); // For search
+  const type = searchParams.get('type');
+  const filter = (searchParams.get('filter') || 'today') as DashboardFilter;
+  const query = searchParams.get('q')?.trim().toLowerCase();
+  const userId = searchParams.get('userId');
 
   try {
-    // 1. Base query handling based on 'filter' (today, week, month)
-    let startDate = new Date();
-    if (filter === 'week') startDate.setDate(startDate.getDate() - 7);
-    else if (filter === 'month') startDate.setMonth(startDate.getMonth() - 1);
-    else if (filter === 'today') startDate.setHours(0, 0, 0, 0);
-    // Custom range handling would go here
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+      .from('receipts')
+      .select(`
+        id,
+        total_amount,
+        receipt_date,
+        created_at,
+        raw_ocr_data,
+        merchants(name),
+        receipt_items(id, name, quantity, unit_price, total_price, created_at)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const receipts = filterReceiptsByDate(normalizeReportReceipts(data), filter);
 
     if (type === 'receipts') {
-      const { data, error } = await supabase
-        .from('receipts')
-        .select(`
-          *,
-          merchants (name)
-        `)
-        .gte('receipt_date', startDate.toISOString())
-        .order('receipt_date', { ascending: false });
-
-      if (error) throw error;
-      return NextResponse.json(data);
+      return NextResponse.json(receipts);
     }
 
     if (type === 'summary') {
-      // Mocked summary calculation
+      const trends = buildTrendSummary(receipts);
       return NextResponse.json({
-        count: 12,
-        total: 8450,
-        up: 2,
-        down: 4
+        count: receipts.length,
+        total: receipts.reduce((sum, receipt) => sum + receipt.total_amount, 0),
+        up: trends.up,
+        down: trends.down,
       });
     }
 
-    if (type === 'search' && query) {
-      const { data, error } = await supabase
-        .from('receipt_items')
-        .select(`
-          *,
-          receipts (receipt_date, merchants(name))
-        `)
-        .ilike('name', `%${query}%`)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return NextResponse.json(data);
+    if (type === 'search') {
+      const items = buildItemRows(receipts).filter((item) => {
+        if (!query) return true;
+        return (
+          item.name.toLowerCase().includes(query) ||
+          item.merchant_name.toLowerCase().includes(query) ||
+          (item.receipt_number || '').toLowerCase().includes(query)
+        );
+      });
+      return NextResponse.json(items);
     }
 
     return NextResponse.json({ message: "Specify type and valid parameters" }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 });
   }
 }

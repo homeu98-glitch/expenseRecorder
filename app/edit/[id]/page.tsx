@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import {
+  normalizeReceiptDraft,
   readPersistedReceiptDraft,
   clearPersistedReceiptDraft,
   type ReceiptDraft,
@@ -14,6 +16,7 @@ import {
 function createEmptyReceiptDraft(): ReceiptDraft {
   return {
     merchant_name: "",
+    receipt_number: "",
     date: new Date().toISOString().split("T")[0],
     total_amount: 0,
     items: [],
@@ -28,24 +31,66 @@ export default function EditReceiptPage() {
   const [data, setData] = useState<ReceiptDraft>(createEmptyReceiptDraft);
 
   useEffect(() => {
-    if (routeId !== "new") {
+    if (!routeId) {
       return;
     }
 
-    try {
-      const normalized = readPersistedReceiptDraft();
-      if (!normalized) {
-        return;
+    if (routeId === "new") {
+      try {
+        const normalized = readPersistedReceiptDraft();
+        if (!normalized) {
+          return;
+        }
+
+        const timer = window.setTimeout(() => {
+          setData(normalized);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+      } catch (error: unknown) {
+        console.error("Error parsing AI data:", error);
       }
-
-      const timer = window.setTimeout(() => {
-        setData(normalized);
-      }, 0);
-
-      return () => window.clearTimeout(timer);
-    } catch (error: unknown) {
-      console.error("Error parsing AI data:", error);
+      return;
     }
+
+    const shopUser = getShopUser();
+    if (!shopUser?.id) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const { data: receipt, error } = await supabase
+          .from("receipts")
+          .select(`
+            id,
+            receipt_date,
+            total_amount,
+            raw_ocr_data,
+            merchants(name),
+            receipt_items(id, name, quantity, unit_price)
+          `)
+          .eq("id", routeId)
+          .eq("user_id", shopUser.id)
+          .single();
+
+        if (error) throw error;
+        const merchantRelation = receipt.merchants as { name?: string } | Array<{ name?: string }> | null;
+        const merchantName = Array.isArray(merchantRelation)
+          ? merchantRelation[0]?.name
+          : merchantRelation?.name;
+
+        setData(normalizeReceiptDraft({
+          merchant_name: merchantName,
+          receipt_number: receipt.raw_ocr_data?.receipt_number,
+          date: receipt.receipt_date,
+          total_amount: receipt.total_amount,
+          items: receipt.receipt_items,
+        }));
+      } catch (error: unknown) {
+        console.error("Error loading receipt:", error);
+      }
+    })();
   }, [routeId]);
 
   const handleUpdateItem = (
@@ -82,6 +127,7 @@ export default function EditReceiptPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          receiptId: routeId !== "new" ? routeId : undefined,
           userId: user.id,
           ...data
         })
@@ -122,6 +168,16 @@ export default function EditReceiptPage() {
               onChange={(e) => setData({...data, merchant_name: e.target.value})}
               className="w-full text-lg font-black border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all"
               placeholder="輸入店名..."
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">收據編號</label>
+            <input
+              type="text"
+              value={data.receipt_number || ""}
+              onChange={(e) => setData({ ...data, receipt_number: e.target.value })}
+              className="w-full font-bold border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all"
+              placeholder="如收據上有編號，請在此確認"
             />
           </div>
           <div className="flex space-x-6">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   TrendingUp, TrendingDown, Receipt, ShoppingBag,
   PlusCircle as PlusCircleIcon, Search, ChevronRight, Loader2
@@ -9,62 +9,72 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { format, startOfDay, startOfWeek, startOfMonth } from "date-fns";
+import {
+  buildTrendSummary,
+  filterReceiptsByDate,
+  normalizeReportReceipts,
+  type DashboardFilter,
+  type ReportReceipt,
+} from "@/lib/reporting";
 
-const timeFilters = [
+const timeFilters: Array<{ id: DashboardFilter; label: string }> = [
   { id: 'today', label: '今日' },
   { id: 'week', label: '本週' },
   { id: 'month', label: '本月' },
 ];
 
 export default function Home() {
-  const [filter, setFilter] = useState('today');
+  const [filter, setFilter] = useState<DashboardFilter>('today');
   const [searchQuery, setSearchQuery] = useState("");
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [stats, setSummary] = useState({ count: 0, total: 0, up: 0, down: 0 });
-  const [recent, setRecent] = useState<any[]>([]);
+  const [user] = useState<{ id: string; shop_name: string } | null>(() => getShopUser());
+  const [loading, setLoading] = useState(() => Boolean(getShopUser()?.id));
+  const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
 
-  useEffect(() => {
-    const shopUser = getShopUser();
-    setUser(shopUser);
-    if (shopUser) {
-      fetchDashboardData(shopUser.id, filter);
-    }
-  }, [filter]);
-
-  async function fetchDashboardData(userId: string, currentFilter: string) {
+  const fetchDashboardData = async (userId: string) => {
     setLoading(true);
     try {
-      let startDate = startOfDay(new Date());
-      if (currentFilter === 'week') startDate = startOfWeek(new Date());
-      else if (currentFilter === 'month') startDate = startOfMonth(new Date());
-
-      // 1. Fetch Summary Stats
-      const { data: receipts, error: rError } = await supabase
+      const { data, error } = await supabase
         .from('receipts')
-        .select('total_amount, id, merchant_id, merchants(name), receipt_date')
+        .select(`
+          id,
+          total_amount,
+          receipt_date,
+          created_at,
+          raw_ocr_data,
+          merchants(name),
+          receipt_items(id, name, quantity, unit_price, total_price, created_at)
+        `)
         .eq('user_id', userId)
-        .gte('receipt_date', format(startDate, 'yyyy-MM-dd'));
+        .order('created_at', { ascending: false });
 
-      if (rError) throw rError;
-
-      const total = receipts?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0;
-
-      setSummary({
-        count: receipts?.length || 0,
-        total: total,
-        up: 0, // Logic for price trends would go here with more complex queries
-        down: 0
-      });
-
-      setRecent(receipts?.slice(0, 5) || []);
+      if (error) throw error;
+      setReceipts(normalizeReportReceipts(data));
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }
+  };
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void fetchDashboardData(user.id);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [user]);
+
+  const filteredReceipts = useMemo(() => filterReceiptsByDate(receipts, filter), [receipts, filter]);
+  const recentUploads = useMemo(() => receipts.slice(0, 5), [receipts]);
+  const trendSummary = useMemo(() => buildTrendSummary(filteredReceipts), [filteredReceipts]);
+  const stats = useMemo(() => ({
+    count: filteredReceipts.length,
+    total: filteredReceipts.reduce((sum, receipt) => sum + receipt.total_amount, 0),
+    up: trendSummary.up,
+    down: trendSummary.down,
+  }), [filteredReceipts, trendSummary]);
 
   if (!user) return null;
 
@@ -160,7 +170,7 @@ export default function Home() {
                <Loader2 className="animate-spin mb-2" size={32} />
                <p className="text-xs">數據加載中...</p>
             </div>
-          ) : recent.length === 0 ? (
+          ) : recentUploads.length === 0 ? (
             <div className="card p-12 text-center space-y-3 bg-gray-50/50 border-dashed border-gray-200">
                <div className="text-gray-300 flex justify-center"><Receipt size={48} /></div>
                <p className="text-gray-400 text-sm font-medium">暫無開支記錄，立即上傳一張吧！</p>
@@ -168,15 +178,18 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recent.map((item) => (
+              {recentUploads.map((item) => (
                 <Link key={item.id} href={`/edit/${item.id}`} className="card flex items-center justify-between p-4 hover:bg-gray-50 transition-all active:scale-[0.99] border-l-4 border-l-blue-500">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xl">
-                      {item.merchants?.name[0] || '?'}
+                      {item.merchant_name[0] || '?'}
                     </div>
                     <div>
-                      <div className="font-bold text-gray-800">{item.merchants?.name || '未知供應商'}</div>
-                      <div className="text-xs text-gray-400 font-medium">{item.receipt_date}</div>
+                      <div className="font-bold text-gray-800">{item.merchant_name}</div>
+                      <div className="text-xs text-gray-400 font-medium">
+                        {item.receipt_date}
+                        {item.receipt_number ? ` • #${item.receipt_number}` : ""}
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
