@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
 import {
   readPersistedReceiptDraft,
@@ -20,13 +20,15 @@ function createEmptyReceiptDraft(): ReceiptDraft {
   };
 }
 
-export default function EditReceiptPage({ params }: { params: { id: string } }) {
+export default function EditReceiptPage() {
   const router = useRouter();
+  const params = useParams<{ id?: string | string[] }>();
+  const routeId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ReceiptDraft>(createEmptyReceiptDraft);
 
   useEffect(() => {
-    if (params.id !== "new") {
+    if (routeId !== "new") {
       return;
     }
 
@@ -44,7 +46,7 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
     } catch (error: unknown) {
       console.error("Error parsing AI data:", error);
     }
-  }, [params.id]);
+  }, [routeId]);
 
   const handleUpdateItem = (
     id: number,
@@ -104,7 +106,7 @@ export default function EditReceiptPage({ params }: { params: { id: string } }) 
           <ArrowLeft size={24} />
         </button>
         <h1 className="text-xl font-black text-center flex-1">
-          {params.id === 'new' ? '檢查並儲存記錄' : '編輯開支記錄'}
+          {routeId === "new" ? "檢查並儲存記錄" : "編輯開支記錄"}
         </h1>
         <div className="w-6" />
       </div>
