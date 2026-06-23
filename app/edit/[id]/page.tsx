@@ -5,6 +5,8 @@ import { Save, Trash2, Plus, ArrowLeft, Loader2, CheckCircle2 } from "lucide-rea
 import { useParams, useRouter } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import ConfettiBurst from "@/components/ConfettiBurst";
+import { playSuccessSound, playPaidSound } from "@/lib/feedback";
 import {
   normalizeReceiptDraft,
   readPersistedReceiptDraft,
@@ -34,6 +36,8 @@ export default function EditReceiptPage() {
   const [supplierSuggestions, setSupplierSuggestions] = useState<string[]>([]);
   const [allItemSuggestions, setAllItemSuggestions] = useState<string[]>([]);
   const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   const receiptImageSrc = useMemo(() => {
     if (data.image_data_url) {
@@ -201,21 +205,54 @@ export default function EditReceiptPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/db/save-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          receiptId: routeId !== "new" ? routeId : undefined,
-          userId: user.id,
-          ...data
-        })
-      });
+      const basePayload = {
+        receiptId: routeId !== "new" ? routeId : undefined,
+        userId: user.id,
+        ...data,
+      };
 
-      if (!response.ok) throw new Error("儲存失敗");
+      const saveReceipt = async (payload: typeof basePayload) => {
+        const response = await fetch('/api/db/save-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      alert("記錄已成功存入資料庫！");
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.error || "儲存失敗");
+        }
+        return result;
+      };
+
+      try {
+        await saveReceipt(basePayload);
+      } catch (firstError) {
+        const hasEmbeddedImage = Boolean(basePayload.image_data_url);
+        if (!hasEmbeddedImage) {
+          throw firstError;
+        }
+
+        await saveReceipt({
+          ...basePayload,
+          image_data_url: undefined,
+        });
+      }
+
+      const paid = (data.payment_status || "unpaid") === "paid";
+      if (paid) {
+        playPaidSound();
+      } else {
+        playSuccessSound();
+      }
+      setShowConfetti(true);
+      setFeedbackMessage(paid ? "已付款並成功儲存" : "收據已成功建立");
       clearPersistedReceiptDraft();
-      router.push("/");
+      window.setTimeout(() => {
+        setShowConfetti(false);
+        setFeedbackMessage(null);
+        router.push("/");
+      }, 1200);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "儲存失敗");
     } finally {
@@ -248,6 +285,12 @@ export default function EditReceiptPage() {
 
   return (
     <div className="space-y-6 pb-24 animate-in fade-in duration-300">
+      <ConfettiBurst active={showConfetti} />
+      {feedbackMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[95] bg-gray-900 text-white px-5 py-3 rounded-full shadow-2xl text-sm font-black animate-in fade-in zoom-in-95 duration-200">
+          {feedbackMessage}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()} className="text-gray-500 hover:text-blue-600 transition-colors">
           <ArrowLeft size={24} />

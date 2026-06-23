@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import ConfettiBurst from "@/components/ConfettiBurst";
+import { playPaidSound } from "@/lib/feedback";
 import { normalizeReportReceipts, type ReportReceipt } from "@/lib/reporting";
 
 export default function PaymentsPage() {
@@ -12,6 +14,7 @@ export default function PaymentsPage() {
   const [tab, setTab] = useState<"unpaid" | "paid">("unpaid");
   const [loading, setLoading] = useState(() => Boolean(getShopUser()?.id));
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   async function loadReceipts(userId: string) {
     setLoading(true);
@@ -68,14 +71,29 @@ export default function PaymentsPage() {
           item.id === receipt.id ? { ...item, payment_status: nextStatus } : item
         )
       );
+      if (nextStatus === "paid") {
+        playPaidSound();
+        setShowConfetti(true);
+        window.setTimeout(() => setShowConfetti(false), 1000);
+      }
     } catch (error) {
       console.error(error);
       alert(error instanceof Error ? error.message : "更新付款狀態失敗");
     }
   }
 
+  const groupedReceipts = useMemo(() => {
+    const monthly = visibleReceipts.filter((receipt) => receipt.payment_method === "monthly");
+    const others = visibleReceipts.filter((receipt) => receipt.payment_method !== "monthly");
+    return [
+      { key: "monthly", title: "月結", items: monthly },
+      { key: "others", title: "其他付款方式", items: others },
+    ].filter((group) => group.items.length > 0);
+  }, [visibleReceipts]);
+
   return (
     <div className="space-y-6 pb-24">
+      <ConfettiBurst active={showConfetti} />
       <header className="flex items-center space-x-4">
         <Link href="/" className="text-gray-500 hover:text-blue-600 transition-colors">
           <ArrowLeft size={24} />
@@ -112,37 +130,42 @@ export default function PaymentsPage() {
         <div className="card py-10 text-center text-gray-400">目前沒有此狀態的收據。</div>
       ) : (
         <div className="space-y-3">
-          {visibleReceipts.map((receipt) => (
-            <div key={receipt.id} className="card p-4 flex items-center justify-between gap-4">
-              <Link href={`/edit/${receipt.id}`} className="flex-1 min-w-0">
-                <div className="font-bold">{receipt.merchant_name}</div>
-                <div className="text-xs text-gray-400">
-                  {receipt.receipt_date}
-                  {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
-                  {receipt.payment_method ? ` • ${receipt.payment_method}` : ""}
+          {groupedReceipts.map((group) => (
+            <section key={group.key} className="space-y-3">
+              <div className="px-1 text-xs font-black tracking-widest text-gray-400 uppercase">{group.title}</div>
+              {group.items.map((receipt) => (
+                <div key={receipt.id} className="card p-4 flex items-center justify-between gap-4">
+                  <Link href={`/edit/${receipt.id}`} className="flex-1 min-w-0">
+                    <div className="font-bold">{receipt.merchant_name}</div>
+                    <div className="text-xs text-gray-400">
+                      {receipt.receipt_date}
+                      {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
+                      {receipt.payment_method ? ` • ${receipt.payment_method}` : ""}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 truncate">
+                      {receipt.items.map((item) => item.name).join("、")}
+                    </div>
+                  </Link>
+                  <div className="text-right">
+                    <div className="font-bold text-lg">${receipt.total_amount.toLocaleString()}</div>
+                    <button
+                      onClick={() => void toggleStatus(receipt)}
+                      className={`mt-2 text-xs font-black px-3 py-1.5 rounded-full ${
+                        receipt.payment_status === "paid"
+                          ? "bg-green-50 text-green-600"
+                          : "bg-amber-50 text-amber-600"
+                      }`}
+                    >
+                      {receipt.payment_status === "paid" ? (
+                        <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />已付款</span>
+                      ) : (
+                        <span className="inline-flex items-center"><Circle size={12} className="mr-1" />未付款</span>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 mt-1 truncate">
-                  {receipt.items.map((item) => item.name).join("、")}
-                </div>
-              </Link>
-              <div className="text-right">
-                <div className="font-bold text-lg">${receipt.total_amount.toLocaleString()}</div>
-                <button
-                  onClick={() => void toggleStatus(receipt)}
-                  className={`mt-2 text-xs font-black px-3 py-1.5 rounded-full ${
-                    receipt.payment_status === "paid"
-                      ? "bg-green-50 text-green-600"
-                      : "bg-amber-50 text-amber-600"
-                  }`}
-                >
-                  {receipt.payment_status === "paid" ? (
-                    <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />已付款</span>
-                  ) : (
-                    <span className="inline-flex items-center"><Circle size={12} className="mr-1" />未付款</span>
-                  )}
-                </button>
-              </div>
-            </div>
+              ))}
+            </section>
           ))}
         </div>
       )}

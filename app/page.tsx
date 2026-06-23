@@ -9,6 +9,8 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import ConfettiBurst from "@/components/ConfettiBurst";
+import { playPaidSound } from "@/lib/feedback";
 import {
   buildTrendSummary,
   filterReceiptsByDate,
@@ -34,6 +36,7 @@ export default function Home() {
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
   const [customStartDate, setCustomStartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const fetchDashboardData = async (userId: string) => {
     setLoading(true);
@@ -105,6 +108,11 @@ export default function Home() {
           receipt.id === receiptId ? { ...receipt, payment_status: nextStatus } : receipt
         )
       );
+      if (nextStatus === "paid") {
+        playPaidSound();
+        setShowConfetti(true);
+        window.setTimeout(() => setShowConfetti(false), 1000);
+      }
     } catch (error: unknown) {
       alert(error instanceof Error ? error.message : "更新付款狀態失敗");
     }
@@ -114,6 +122,7 @@ export default function Home() {
 
   return (
     <div className="space-y-6 pb-24 animate-in fade-in duration-500">
+      <ConfettiBurst active={showConfetti} />
       {/* Header & Filter */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
