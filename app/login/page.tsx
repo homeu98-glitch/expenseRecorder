@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { setShopUserSession } from "@/lib/auth";
+import { loadShopAccountSettings } from "@/lib/account-settings";
 import { Loader2, Lock, Store, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -64,6 +65,14 @@ export default function LoginPage() {
 
       if (dbError || !data) {
         throw new Error("賬號或密碼錯誤");
+      }
+
+      const accountSettings = await loadShopAccountSettings(data.id);
+      if (accountSettings.accountStatus === "suspended") {
+        throw new Error("此賬戶已被停用，請聯絡管理員");
+      }
+      if (accountSettings.accountStatus === "deleted") {
+        throw new Error("此賬戶已被刪除");
       }
 
       setShopUserSession({ ...data, role: "user" });

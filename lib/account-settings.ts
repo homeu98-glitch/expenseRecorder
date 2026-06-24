@@ -16,6 +16,14 @@ export type SupplierPreset = {
 export type ShopPresets = {
   suppliers: SupplierPreset[];
   customUnits: string[];
+  hiddenSuppliers: string[];
+};
+
+export type AccountStatus = "active" | "suspended" | "deleted";
+
+export type ShopAccountSettings = {
+  customUnits: string[];
+  accountStatus: AccountStatus;
 };
 
 const SETTINGS_MERCHANT_PREFIX = "__shop_settings__:";
@@ -42,6 +50,17 @@ function getSettingsMerchantName(userId: string) {
   return `${SETTINGS_MERCHANT_PREFIX}${userId}`;
 }
 
+function getDefaultAccountSettings(): ShopAccountSettings {
+  return {
+    customUnits: ["kg", "lb"],
+    accountStatus: "active",
+  };
+}
+
+function normalizeAccountStatus(value: unknown): AccountStatus {
+  return value === "suspended" || value === "deleted" ? value : "active";
+}
+
 export function isReservedMerchantName(name: string) {
   return name.startsWith(SETTINGS_MERCHANT_PREFIX);
 }
@@ -58,6 +77,53 @@ export function getUnitLabel(unit: string) {
   return unit;
 }
 
+export async function loadShopAccountSettings(userId: string): Promise<ShopAccountSettings> {
+  const { data: merchant, error } = await supabase
+    .from("merchants")
+    .select("address")
+    .eq("user_id", userId)
+    .eq("name", getSettingsMerchantName(userId))
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  const defaults = getDefaultAccountSettings();
+  const settingsPayload = decodePayload<{ customUnits?: string[]; accountStatus?: string }>(SETTINGS_PREFIX, merchant?.address);
+
+  return {
+    customUnits: Array.isArray(settingsPayload?.customUnits)
+      ? Array.from(
+          new Set(
+            settingsPayload.customUnits.map((unit) => normalizeUnitValue(unit)).filter((unit) => unit !== "unit")
+          )
+        )
+      : defaults.customUnits,
+    accountStatus: normalizeAccountStatus(settingsPayload?.accountStatus),
+  };
+}
+
+async function saveShopAccountSettings(userId: string, settings: ShopAccountSettings) {
+  const { error } = await supabase
+    .from("merchants")
+    .upsert(
+      {
+        user_id: userId,
+        name: getSettingsMerchantName(userId),
+        address: encodePayload(SETTINGS_PREFIX, {
+          customUnits: settings.customUnits,
+          accountStatus: settings.accountStatus,
+        }),
+      },
+      { onConflict: "user_id,name" }
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function loadShopPresets(userId: string): Promise<ShopPresets> {
   const { data: merchants, error } = await supabase
     .from("merchants")
@@ -69,14 +135,15 @@ export async function loadShopPresets(userId: string): Promise<ShopPresets> {
     throw error;
   }
 
-  let customUnits = ["kg", "lb"];
+  const settings = getDefaultAccountSettings();
   const suppliers: SupplierPreset[] = [];
+  const hiddenSuppliers: string[] = [];
 
   (merchants ?? []).forEach((merchant) => {
     if (merchant.name === getSettingsMerchantName(userId)) {
-      const settingsPayload = decodePayload<{ customUnits?: string[] }>(SETTINGS_PREFIX, merchant.address);
+      const settingsPayload = decodePayload<{ customUnits?: string[]; accountStatus?: string }>(SETTINGS_PREFIX, merchant.address);
       if (Array.isArray(settingsPayload?.customUnits)) {
-        customUnits = settingsPayload.customUnits
+        settings.customUnits = settingsPayload.customUnits
           .map((unit) => normalizeUnitValue(unit))
           .filter((unit) => unit !== "unit");
       }
@@ -87,7 +154,11 @@ export async function loadShopPresets(userId: string): Promise<ShopPresets> {
       return;
     }
 
-    const presetPayload = decodePayload<{ products?: ProductPreset[] }>(PRESET_PREFIX, merchant.address);
+    const presetPayload = decodePayload<{ products?: ProductPreset[]; hidden?: boolean }>(PRESET_PREFIX, merchant.address);
+    if (presetPayload?.hidden) {
+      hiddenSuppliers.push(merchant.name);
+      return;
+    }
     suppliers.push({
       name: merchant.name,
       products: Array.isArray(presetPayload?.products) ? presetPayload!.products : [],
@@ -96,29 +167,51 @@ export async function loadShopPresets(userId: string): Promise<ShopPresets> {
 
   return {
     suppliers,
-    customUnits: Array.from(new Set(customUnits)).filter(Boolean),
+    customUnits: Array.from(new Set(settings.customUnits)).filter(Boolean),
+    hiddenSuppliers,
   };
 }
 
 export async function saveShopCustomUnits(userId: string, customUnits: string[]) {
+  const current = await loadShopAccountSettings(userId);
   const normalized = Array.from(
     new Set(customUnits.map((unit) => normalizeUnitValue(unit)).filter((unit) => unit !== "unit"))
   );
+  await saveShopAccountSettings(userId, { ...current, customUnits: normalized });
+}
 
-  const { error } = await supabase
+export async function saveShopAccountStatus(userId: string, accountStatus: AccountStatus) {
+  const current = await loadShopAccountSettings(userId);
+  await saveShopAccountSettings(userId, { ...current, accountStatus });
+}
+
+export async function loadAllAccountStatuses(userIds: string[]) {
+  if (userIds.length === 0) {
+    return {};
+  }
+
+  const settingsNames = userIds.map((userId) => getSettingsMerchantName(userId));
+  const { data, error } = await supabase
     .from("merchants")
-    .upsert(
-      {
-        user_id: userId,
-        name: getSettingsMerchantName(userId),
-        address: encodePayload(SETTINGS_PREFIX, { customUnits: normalized }),
-      },
-      { onConflict: "user_id,name" }
-    );
+    .select("name, address")
+    .in("name", settingsNames);
 
   if (error) {
     throw error;
   }
+
+  const statuses: Record<string, AccountStatus> = {};
+  userIds.forEach((id) => {
+    statuses[id] = "active";
+  });
+
+  (data ?? []).forEach((merchant) => {
+    const userId = merchant.name.replace(SETTINGS_MERCHANT_PREFIX, "");
+    const payload = decodePayload<{ accountStatus?: string }>(SETTINGS_PREFIX, merchant.address);
+    statuses[userId] = normalizeAccountStatus(payload?.accountStatus);
+  });
+
+  return statuses;
 }
 
 export async function saveSupplierPreset(userId: string, supplier: SupplierPreset) {
@@ -141,7 +234,7 @@ export async function saveSupplierPreset(userId: string, supplier: SupplierPrese
 export async function deleteSupplierPreset(userId: string, supplierName: string) {
   const { error } = await supabase
     .from("merchants")
-    .update({ address: null })
+    .update({ address: encodePayload(PRESET_PREFIX, { products: [], hidden: true }) })
     .eq("user_id", userId)
     .eq("name", supplierName);
 

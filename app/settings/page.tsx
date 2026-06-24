@@ -19,7 +19,7 @@ export default function SettingsPage() {
   const [user] = useState<{ id: string; shop_name: string; login_id: string; role?: string } | null>(() => getShopUser());
   const [status, setStatus] = useState<string | null>(null);
   const [loadingPresets, setLoadingPresets] = useState(() => Boolean(getShopUser()?.id && getShopUser()?.role !== "admin"));
-  const [presets, setPresets] = useState<ShopPresets>({ suppliers: [], customUnits: ["kg", "lb"] });
+  const [presets, setPresets] = useState<ShopPresets>({ suppliers: [], customUnits: ["kg", "lb"], hiddenSuppliers: [] });
   const [supplierName, setSupplierName] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [productName, setProductName] = useState("");

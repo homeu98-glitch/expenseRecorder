@@ -42,6 +42,7 @@ export default function EditReceiptPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const receiptImageSrc = useMemo(
     () => data.image_data_url || (data.image_url ? signedImageUrl : null),
@@ -167,7 +168,11 @@ export default function EditReceiptPage() {
         ]);
 
         const merchantNames = Array.from(
-          new Set((merchants ?? []).map((merchant) => merchant.name).filter((name) => Boolean(name) && !isReservedMerchantName(name)))
+          new Set(
+            (merchants ?? [])
+              .map((merchant) => merchant.name)
+              .filter((name) => Boolean(name) && !isReservedMerchantName(name) && !presets.hiddenSuppliers.includes(name))
+          )
         ) as string[];
         const allItems = new Set<string>();
         const itemMap = new Map<string, Set<string>>();
@@ -360,6 +365,15 @@ export default function EditReceiptPage() {
           {feedbackMessage}
         </div>
       )}
+      {showImageModal && receiptImageSrc && (
+        <button
+          type="button"
+          onClick={() => setShowImageModal(false)}
+          className="fixed inset-0 z-[110] bg-black/90 p-4 flex items-center justify-center"
+        >
+          <img src={receiptImageSrc} alt="放大收據" className="max-w-full max-h-full object-contain rounded-xl" />
+        </button>
+      )}
       <div className="flex items-center justify-between">
         <button onClick={() => router.back()} className="text-gray-500 hover:text-blue-600 transition-colors">
           <ArrowLeft size={24} />
@@ -374,9 +388,13 @@ export default function EditReceiptPage() {
         {/* Basic Info */}
         <section className="card space-y-4 border-l-4 border-l-blue-600">
           {receiptImageSrc && (
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-900">
+            <button
+              type="button"
+              onClick={() => setShowImageModal(true)}
+              className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-900 block w-full text-left"
+            >
               <img src={receiptImageSrc} alt="掃描收據" className="w-full max-h-[40vh] object-contain" />
-            </div>
+            </button>
           )}
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">供應商名稱</label>

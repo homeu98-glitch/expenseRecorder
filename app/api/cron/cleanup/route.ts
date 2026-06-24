@@ -10,18 +10,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    const fiftyDaysAgo = subDays(new Date(), 50).toISOString();
+    const ninetyDaysAgo = subDays(new Date(), 90).toISOString();
 
-    // 1. Find receipts older than 50 days with images
+    // 1. Find receipts older than 90 days
     const { data: receipts, error } = await supabase
       .from('receipts')
-      .select('image_url')
-      .lt('created_at', fiftyDaysAgo)
-      .not('image_url', 'is', null);
+      .select('id, image_url')
+      .lt('created_at', ninetyDaysAgo);
 
     if (error) throw error;
 
     if (receipts && receipts.length > 0) {
+      const receiptIds = receipts.map((receipt) => receipt.id);
       const filePaths = receipts
         .map((r) => {
           if (!r.image_url) return null;
@@ -32,20 +32,27 @@ export async function GET(request: Request) {
         })
         .filter(Boolean) as string[];
 
-      // 2. Delete from Supabase Storage
-      const { error: storageError } = await supabase.storage
+      if (filePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('receipts')
+          .remove(filePaths);
+
+        if (storageError) throw storageError;
+      }
+
+      const { error: itemDeleteError } = await supabase
+        .from('receipt_items')
+        .delete()
+        .in('receipt_id', receiptIds);
+
+      if (itemDeleteError) throw itemDeleteError;
+
+      const { error: receiptDeleteError } = await supabase
         .from('receipts')
-        .remove(filePaths);
+        .delete()
+        .in('id', receiptIds);
 
-      if (storageError) throw storageError;
-
-      // 3. Clear image_url in database
-      const { error: dbError } = await supabase
-        .from('receipts')
-        .update({ image_url: null })
-        .lt('created_at', fiftyDaysAgo);
-
-      if (dbError) throw dbError;
+      if (receiptDeleteError) throw receiptDeleteError;
     }
 
     return NextResponse.json({ success: true, count: receipts?.length || 0 });

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { Home, PlusCircle, BarChart2, Settings, Wallet, Shield } from "lucide-react";
+import { Home, PlusCircle, BarChart2, Settings, Wallet, Shield, Users } from "lucide-react";
 import { clsx } from "clsx";
 import { getShopUser } from "@/lib/auth";
 
@@ -17,6 +17,7 @@ const defaultNavItems = [
 
 const adminNavItems = [
   { href: "/admin", label: "後台", icon: Shield },
+  { href: "/admin/accounts", label: "賬戶", icon: Users },
   { href: "/settings", label: "設定", icon: Settings },
 ];
 
@@ -40,7 +41,7 @@ export function Navigation() {
               href={item.href}
               className={clsx(
                 "flex items-center space-x-2 text-sm font-medium transition-colors",
-                pathname === item.href ? "text-blue-600" : "text-gray-600 hover:text-blue-600"
+                (pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))) ? "text-blue-600" : "text-gray-600 hover:text-blue-600"
               )}
             >
               <item.icon size={18} />
@@ -58,7 +59,7 @@ export function Navigation() {
             href={item.href}
             className={clsx(
               "flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors",
-              pathname === item.href ? "text-blue-600" : "text-gray-500 hover:text-blue-600"
+              (pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))) ? "text-blue-600" : "text-gray-500 hover:text-blue-600"
             )}
           >
             <item.icon size={22} />

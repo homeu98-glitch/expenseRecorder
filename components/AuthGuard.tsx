@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
+import { loadShopAccountSettings } from "@/lib/account-settings";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,6 +13,19 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const isAdminPage = pathname.startsWith("/admin");
 
   useEffect(() => {
+    if (user?.role === "user" && user.id) {
+      void (async () => {
+        try {
+          const settings = await loadShopAccountSettings(user.id);
+          if (settings.accountStatus === "suspended" || settings.accountStatus === "deleted") {
+            router.push("/login");
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      })();
+    }
+
     if (!user && !isAuthPage) {
       router.push("/login");
       return;
