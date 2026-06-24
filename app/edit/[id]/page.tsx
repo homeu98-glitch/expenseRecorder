@@ -35,6 +35,7 @@ export default function EditReceiptPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ReceiptDraft>(createEmptyReceiptDraft);
   const [supplierSuggestions, setSupplierSuggestions] = useState<string[]>([]);
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [allItemSuggestions, setAllItemSuggestions] = useState<string[]>([]);
   const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
   const [productPresetMap, setProductPresetMap] = useState<Record<string, { product_type?: string; default_unit?: string }>>({});
@@ -48,6 +49,13 @@ export default function EditReceiptPage() {
     () => data.image_data_url || (data.image_url ? signedImageUrl : null),
     [data.image_data_url, data.image_url, signedImageUrl]
   );
+  const filteredSupplierSuggestions = useMemo(() => {
+    const query = data.merchant_name.trim().toLowerCase();
+    const matches = supplierSuggestions.filter((supplier) =>
+      !query ? true : supplier.toLowerCase().includes(query)
+    );
+    return matches.slice(0, 8);
+  }, [data.merchant_name, supplierSuggestions]);
 
   useEffect(() => {
     if (data.image_data_url || !data.image_url) {
@@ -398,19 +406,37 @@ export default function EditReceiptPage() {
           )}
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">供應商名稱</label>
-            <input
-              type="text"
-              list="supplier-suggestions"
-              value={data.merchant_name}
-              onChange={(e) => setData({...data, merchant_name: e.target.value})}
-              className="w-full text-lg font-black border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all"
-              placeholder="輸入店名..."
-            />
-            <datalist id="supplier-suggestions">
-              {supplierSuggestions.map((supplier) => (
-                <option key={supplier} value={supplier} />
-              ))}
-            </datalist>
+            <div className="relative">
+              <input
+                type="text"
+                value={data.merchant_name}
+                onFocus={() => setShowSupplierDropdown(true)}
+                onBlur={() => window.setTimeout(() => setShowSupplierDropdown(false), 120)}
+                onChange={(e) => {
+                  setData({ ...data, merchant_name: e.target.value });
+                  setShowSupplierDropdown(true);
+                }}
+                className="w-full text-lg font-black border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all bg-transparent"
+              />
+              {showSupplierDropdown && filteredSupplierSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl z-20 overflow-hidden">
+                  {filteredSupplierSuggestions.map((supplier) => (
+                    <button
+                      key={supplier}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setData({ ...data, merchant_name: supplier });
+                        setShowSupplierDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-gray-50 last:border-b-0"
+                    >
+                      {supplier}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">收據編號</label>
