@@ -37,6 +37,7 @@ export default function EditReceiptPage() {
   const [supplierSuggestions, setSupplierSuggestions] = useState<string[]>([]);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [allItemSuggestions, setAllItemSuggestions] = useState<string[]>([]);
+  const [activeItemDropdownId, setActiveItemDropdownId] = useState<number | null>(null);
   const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
   const [productPresetMap, setProductPresetMap] = useState<Record<string, { product_type?: string; default_unit?: string }>>({});
   const [customUnits, setCustomUnits] = useState<string[]>(["kg", "lb"]);
@@ -56,6 +57,18 @@ export default function EditReceiptPage() {
     );
     return matches.slice(0, 8);
   }, [data.merchant_name, supplierSuggestions]);
+  const itemSuggestionsById = useMemo(() => {
+    const merchantSuggestions = supplierItemMap[data.merchant_name.trim().toLowerCase()] || allItemSuggestions;
+    return Object.fromEntries(
+      data.items.map((item) => {
+        const query = item.name.trim().toLowerCase();
+        const matches = merchantSuggestions.filter((suggestion) =>
+          !query ? true : suggestion.toLowerCase().includes(query)
+        );
+        return [item.id, matches.slice(0, 8)];
+      })
+    ) as Record<number, string[]>;
+  }, [allItemSuggestions, data.items, data.merchant_name, supplierItemMap]);
 
   useEffect(() => {
     if (data.image_data_url || !data.image_url) {
@@ -417,6 +430,7 @@ export default function EditReceiptPage() {
                   setShowSupplierDropdown(true);
                 }}
                 className="w-full text-lg font-black border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all bg-transparent"
+                placeholder="請輸入供應商名稱"
               />
               {showSupplierDropdown && filteredSupplierSuggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl z-20 overflow-hidden">
@@ -531,19 +545,38 @@ export default function EditReceiptPage() {
               <div key={item.id} className="card p-4 space-y-4 relative group hover:border-blue-200 transition-all">
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex-1 min-w-0">
-                  <input
-                    type="text"
-                    list={`item-suggestions-${item.id}`}
-                    placeholder="品項名稱 (如: 雞翅)"
-                    value={item.name}
-                    onChange={(e) => handleUpdateItem(item.id, 'name', e.target.value)}
-                    className="w-full min-w-0 font-black text-gray-800 border-b border-transparent focus:border-blue-200 outline-none py-1"
-                  />
-                  <datalist id={`item-suggestions-${item.id}`}>
-                    {(supplierItemMap[data.merchant_name.trim().toLowerCase()] || allItemSuggestions).map((suggestion) => (
-                      <option key={`${item.id}-${suggestion}`} value={suggestion} />
-                    ))}
-                  </datalist>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="品項名稱 (如: 雞翅)"
+                        value={item.name}
+                        onFocus={() => setActiveItemDropdownId(item.id)}
+                        onBlur={() => window.setTimeout(() => setActiveItemDropdownId((current) => (current === item.id ? null : current)), 120)}
+                        onChange={(e) => {
+                          handleUpdateItem(item.id, 'name', e.target.value);
+                          setActiveItemDropdownId(item.id);
+                        }}
+                        className="w-full min-w-0 font-black text-gray-800 border-b border-transparent focus:border-blue-200 outline-none py-1"
+                      />
+                      {activeItemDropdownId === item.id && (itemSuggestionsById[item.id]?.length || 0) > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl z-20 overflow-hidden">
+                          {(itemSuggestionsById[item.id] || []).map((suggestion) => (
+                            <button
+                              key={`${item.id}-${suggestion}`}
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                handleUpdateItem(item.id, "name", suggestion);
+                                setActiveItemDropdownId(null);
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-gray-50 last:border-b-0"
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => handleRemoveItem(item.id)}

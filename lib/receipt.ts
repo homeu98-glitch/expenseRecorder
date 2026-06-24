@@ -192,8 +192,8 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
   return {
     merchant_name: String(
       getFirstDefined(payload, ["merchant_name", "store_name", "merchant", "vendor", "shop_name"]) ??
-        "未知供應商"
-    ).trim() || "未知供應商",
+        ""
+    ).trim(),
     receipt_number: String(
       getFirstDefined(payload, [
         "receipt_number",
