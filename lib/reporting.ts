@@ -25,6 +25,7 @@ export type ReportItemRow = {
 
 export type ReportReceipt = {
   id: string;
+  user_id: string;
   merchant_name: string;
   receipt_date: string;
   created_at: string | null;
@@ -164,6 +165,7 @@ export function normalizeReportReceipts(input: unknown): ReportReceipt[] {
       const merchantName = normalizeMerchantName(merchantRecord?.name);
       const receiptItems = Array.isArray(row.receipt_items) ? row.receipt_items : [];
       const receiptId = String(row.id ?? "");
+      const userId = String(row.user_id ?? "");
       const receiptDate = normalizeDateString(row.receipt_date);
       const receiptNumber = getReceiptNumber(row.raw_ocr_data);
       const createdAt = typeof row.created_at === "string" ? row.created_at : null;
@@ -213,6 +215,7 @@ export function normalizeReportReceipts(input: unknown): ReportReceipt[] {
 
       return {
         id: receiptId,
+        user_id: userId,
         merchant_name: merchantName,
         receipt_date: receiptDate,
         created_at: createdAt,

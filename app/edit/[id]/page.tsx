@@ -7,7 +7,7 @@ import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import { playSuccessSound, playPaidSound } from "@/lib/feedback";
-import { readShopPresets } from "@/lib/presets";
+import { getUnitLabel, isReservedMerchantName, loadShopPresets, normalizeUnitValue } from "@/lib/account-settings";
 import {
   normalizeReceiptDraft,
   readPersistedReceiptDraft,
@@ -38,6 +38,7 @@ export default function EditReceiptPage() {
   const [allItemSuggestions, setAllItemSuggestions] = useState<string[]>([]);
   const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
   const [productPresetMap, setProductPresetMap] = useState<Record<string, { product_type?: string; default_unit?: string }>>({});
+  const [customUnits, setCustomUnits] = useState<string[]>(["kg", "lb"]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [signedImageUrl, setSignedImageUrl] = useState<string | null>(null);
@@ -119,6 +120,9 @@ export default function EditReceiptPage() {
           ? merchantRelation[0]?.name
           : merchantRelation?.name;
 
+        const loadedPresets = await loadShopPresets(shopUser.id);
+        const allowedUnits = new Set(["unit", ...loadedPresets.customUnits]);
+
         setData(normalizeReceiptDraft({
           merchant_name: merchantName,
           receipt_number: receipt.raw_ocr_data?.receipt_number,
@@ -130,7 +134,9 @@ export default function EditReceiptPage() {
           image_url: receipt.image_url,
           items: receipt.receipt_items.map((item: { id: string; name: string; quantity: number; unit_price: number }, index: number) => ({
             ...item,
-            quantity_unit: receipt.raw_ocr_data?.item_metadata?.[index]?.quantity_unit,
+            quantity_unit: allowedUnits.has(receipt.raw_ocr_data?.item_metadata?.[index]?.quantity_unit)
+              ? receipt.raw_ocr_data?.item_metadata?.[index]?.quantity_unit
+              : "unit",
             product_type: receipt.raw_ocr_data?.item_metadata?.[index]?.product_type,
           })),
         }));
@@ -148,7 +154,7 @@ export default function EditReceiptPage() {
 
     void (async () => {
       try {
-        const [{ data: merchants }, { data: receipts }] = await Promise.all([
+        const [{ data: merchants }, { data: receipts }, presets] = await Promise.all([
           supabase.from("merchants").select("name").eq("user_id", shopUser.id).order("name"),
           supabase
             .from("receipts")
@@ -157,15 +163,16 @@ export default function EditReceiptPage() {
               receipt_items(name)
             `)
             .eq("user_id", shopUser.id),
+          loadShopPresets(shopUser.id),
         ]);
 
         const merchantNames = Array.from(
-          new Set((merchants ?? []).map((merchant) => merchant.name).filter(Boolean))
+          new Set((merchants ?? []).map((merchant) => merchant.name).filter((name) => Boolean(name) && !isReservedMerchantName(name)))
         ) as string[];
-        const presets = readShopPresets(shopUser.id);
         const allItems = new Set<string>();
         const itemMap = new Map<string, Set<string>>();
         const presetMap = new Map<string, { product_type?: string; default_unit?: string }>();
+        setCustomUnits(presets.customUnits);
 
         presets.suppliers.forEach((supplier) => {
           if (supplier.name?.trim()) {
@@ -208,7 +215,7 @@ export default function EditReceiptPage() {
           }
         });
 
-        setSupplierSuggestions(merchantNames);
+        setSupplierSuggestions(Array.from(new Set(merchantNames)).sort());
         setAllItemSuggestions(Array.from(allItems).sort());
         setProductPresetMap(Object.fromEntries(presetMap.entries()));
         setSupplierItemMap(
@@ -236,8 +243,8 @@ export default function EditReceiptPage() {
       const nextItem = { ...item, [field]: value };
       if (field === "name" && typeof value === "string") {
         const preset = productPresetMap[`${merchantKey}::${value.trim().toLowerCase()}`];
-        if (preset?.default_unit && !nextItem.quantity_unit) {
-          nextItem.quantity_unit = preset.default_unit;
+        if (preset?.default_unit) {
+          nextItem.quantity_unit = normalizeUnitValue(preset.default_unit);
         }
         if (preset?.product_type && !nextItem.product_type) {
           nextItem.product_type = preset.product_type;
@@ -519,8 +526,9 @@ export default function EditReceiptPage() {
                       className="w-full bg-transparent py-1 outline-none font-bold text-sm min-w-0"
                     >
                       <option value="unit">個</option>
-                      <option value="kg">KG</option>
-                      <option value="lb">Pound</option>
+                      {customUnits.map((unit) => (
+                        <option key={unit} value={unit}>{getUnitLabel(unit)}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 min-w-0">

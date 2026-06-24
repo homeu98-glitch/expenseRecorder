@@ -31,12 +31,13 @@ const timeFilters: Array<{ id: HomeFilter; label: string }> = [
 export default function Home() {
   const [filter, setFilter] = useState<HomeFilter>('today');
   const [searchQuery, setSearchQuery] = useState("");
-  const [user] = useState<{ id: string; shop_name: string } | null>(() => getShopUser());
+  const [user] = useState<{ id: string; shop_name: string; role?: string } | null>(() => getShopUser());
   const [loading, setLoading] = useState(() => Boolean(getShopUser()?.id));
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
   const [customStartDate, setCustomStartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [pendingPaymentIds, setPendingPaymentIds] = useState<string[]>([]);
 
   const fetchDashboardData = async (userId: string) => {
     setLoading(true);
@@ -96,6 +97,12 @@ export default function Home() {
   async function togglePaymentStatus(receiptId: string, currentStatus: string) {
     if (!user?.id) return;
     const nextStatus = currentStatus === "paid" ? "unpaid" : "paid";
+    setPendingPaymentIds((current) => [...current, receiptId]);
+    setReceipts((current) =>
+      current.map((receipt) =>
+        receipt.id === receiptId ? { ...receipt, payment_status: nextStatus } : receipt
+      )
+    );
     try {
       const response = await fetch(`/api/db/receipt/${receiptId}`, {
         method: "PATCH",
@@ -103,18 +110,20 @@ export default function Home() {
         body: JSON.stringify({ userId: user.id, payment_status: nextStatus }),
       });
       if (!response.ok) throw new Error("更新付款狀態失敗");
-      setReceipts((current) =>
-        current.map((receipt) =>
-          receipt.id === receiptId ? { ...receipt, payment_status: nextStatus } : receipt
-        )
-      );
       if (nextStatus === "paid") {
         playPaidSound();
         setShowConfetti(true);
         window.setTimeout(() => setShowConfetti(false), 1000);
       }
     } catch (error: unknown) {
+      setReceipts((current) =>
+        current.map((receipt) =>
+          receipt.id === receiptId ? { ...receipt, payment_status: currentStatus } : receipt
+        )
+      );
       alert(error instanceof Error ? error.message : "更新付款狀態失敗");
+    } finally {
+      setPendingPaymentIds((current) => current.filter((id) => id !== receiptId));
     }
   }
 
@@ -261,13 +270,18 @@ export default function Home() {
                     <div className="font-black text-gray-700 text-lg">${Number(item.total_amount).toLocaleString()}</div>
                     <button
                       onClick={() => void togglePaymentStatus(item.id, item.payment_status)}
-                      className={`mt-2 text-[10px] font-black px-3 py-1 rounded-full ${
+                      disabled={pendingPaymentIds.includes(item.id)}
+                      className={`mt-2 text-[10px] font-black px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-60 ${
                         item.payment_status === "paid"
-                          ? "bg-green-50 text-green-600"
-                          : "bg-amber-50 text-amber-600"
+                          ? "bg-green-50 text-green-600 border-green-200 shadow-sm"
+                          : "bg-amber-50 text-amber-600 border-amber-200 shadow-sm"
                       }`}
                     >
-                      {item.payment_status === "paid" ? "已付款" : "未付款"}
+                      {pendingPaymentIds.includes(item.id)
+                        ? "處理中..."
+                        : item.payment_status === "paid"
+                          ? "已付款"
+                          : "未付款"}
                     </button>
                   </div>
                 </div>

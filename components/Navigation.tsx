@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { Home, PlusCircle, BarChart2, Settings, Wallet } from "lucide-react";
+import { Home, PlusCircle, BarChart2, Settings, Wallet, Shield } from "lucide-react";
 import { clsx } from "clsx";
+import { getShopUser } from "@/lib/auth";
 
-const navItems = [
+const defaultNavItems = [
   { href: "/", label: "首頁", icon: Home },
   { href: "/upload", label: "新增", icon: PlusCircle },
   { href: "/payments", label: "付款", icon: Wallet },
@@ -13,8 +15,18 @@ const navItems = [
   { href: "/settings", label: "設定", icon: Settings },
 ];
 
+const adminNavItems = [
+  { href: "/admin", label: "後台", icon: Shield },
+  { href: "/settings", label: "設定", icon: Settings },
+];
+
 export function Navigation() {
   const pathname = usePathname();
+  const user = getShopUser();
+  const navItems = useMemo(
+    () => (user?.role === "admin" ? adminNavItems : defaultNavItems),
+    [user?.role]
+  );
 
   return (
     <>

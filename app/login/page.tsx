@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { setShopUserSession } from "@/lib/auth";
 import { Loader2, Lock, Store, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -24,6 +25,36 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      if (loginId === "60000000") {
+        const { data: adminRow } = await supabase
+          .from("shop_users")
+          .select("*")
+          .eq("login_id", loginId)
+          .maybeSingle();
+
+        if (adminRow) {
+          if (adminRow.login_pin !== pin) {
+            throw new Error("賬號或密碼錯誤");
+          }
+          setShopUserSession({ ...adminRow, role: "admin" });
+          router.push("/admin");
+          return;
+        }
+
+        if (pin !== "0000") {
+          throw new Error("賬號或密碼錯誤");
+        }
+
+        setShopUserSession({
+          id: "admin-root",
+          shop_name: "系統管理員",
+          login_id: "60000000",
+          role: "admin",
+        });
+        router.push("/admin");
+        return;
+      }
+
       const { data, error: dbError } = await supabase
         .from("shop_users")
         .select("*")
@@ -35,11 +66,10 @@ export default function LoginPage() {
         throw new Error("賬號或密碼錯誤");
       }
 
-      // Store in local storage for now (Simplified session management)
-      localStorage.setItem("shop_user", JSON.stringify(data));
+      setShopUserSession({ ...data, role: "user" });
       router.push("/");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "登入失敗");
     } finally {
       setLoading(false);
     }

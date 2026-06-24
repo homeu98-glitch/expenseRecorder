@@ -1,52 +1,72 @@
 "use client";
 
-import { useState } from "react";
-import { Shield, Database, Trash2, ArrowLeft, LogOut, Download, CheckCircle2, PlusCircle, Package } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Shield, Database, Trash2, ArrowLeft, LogOut, Download, CheckCircle2, PlusCircle, Package, KeyRound, Ruler } from "lucide-react";
 import Link from "next/link";
 import { getShopUser, logout } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { readShopPresets, saveShopPresets, type ShopPresets } from "@/lib/presets";
+import {
+  deleteSupplierPreset,
+  getUnitLabel,
+  loadShopPresets,
+  normalizeUnitValue,
+  saveShopCustomUnits,
+  saveSupplierPreset,
+  type ShopPresets,
+} from "@/lib/account-settings";
 
 export default function SettingsPage() {
-  const [user] = useState<{ id: string; shop_name: string; login_id: string } | null>(() => getShopUser());
+  const [user] = useState<{ id: string; shop_name: string; login_id: string; role?: string } | null>(() => getShopUser());
   const [status, setStatus] = useState<string | null>(null);
-  const [presets, setPresets] = useState<ShopPresets>(() => {
-    const currentUser = getShopUser();
-    return currentUser?.id ? readShopPresets(currentUser.id) : { suppliers: [] };
-  });
+  const [loadingPresets, setLoadingPresets] = useState(() => Boolean(getShopUser()?.id && getShopUser()?.role !== "admin"));
+  const [presets, setPresets] = useState<ShopPresets>({ suppliers: [], customUnits: ["kg", "lb"] });
   const [supplierName, setSupplierName] = useState("");
-  const [selectedSupplier, setSelectedSupplier] = useState(() => {
-    const currentUser = getShopUser();
-    const savedPresets = currentUser?.id ? readShopPresets(currentUser.id) : { suppliers: [] };
-    return savedPresets.suppliers[0]?.name || "";
-  });
+  const [selectedSupplier, setSelectedSupplier] = useState("");
   const [productName, setProductName] = useState("");
   const [productType, setProductType] = useState("");
   const [defaultUnit, setDefaultUnit] = useState("kg");
+  const [newCustomUnit, setNewCustomUnit] = useState("");
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
 
-  function persistNextPresets(nextPresets: ShopPresets, nextStatus: string) {
-    if (!user?.id) return;
-    saveShopPresets(user.id, nextPresets);
-    setPresets(nextPresets);
-    setStatus(nextStatus);
-  }
+  useEffect(() => {
+    if (!user?.id || user.role === "admin") {
+      return;
+    }
 
-  function addSupplierPreset() {
+    void (async () => {
+      try {
+        const loaded = await loadShopPresets(user.id);
+        setPresets(loaded);
+        setSelectedSupplier((current) => current || loaded.suppliers[0]?.name || "");
+      } catch (error) {
+        console.error(error);
+        setStatus("預設資料載入失敗");
+      } finally {
+        setLoadingPresets(false);
+      }
+    })();
+  }, [user]);
+
+  async function addSupplierPreset() {
     const name = supplierName.trim();
-    if (!name || !user?.id) return;
+    if (!name || !user?.id || user.role === "admin") return;
     const nextSuppliers = presets.suppliers.some((supplier) => supplier.name.toLowerCase() === name.toLowerCase())
       ? presets.suppliers
       : [...presets.suppliers, { name, products: [] }];
-    const nextPresets = { suppliers: nextSuppliers };
-    persistNextPresets(nextPresets, "供應商預設已更新");
+    await saveSupplierPreset(user.id, { name, products: nextSuppliers.find((supplier) => supplier.name === name)?.products || [] });
+    const nextPresets = { ...presets, suppliers: nextSuppliers };
+    setPresets(nextPresets);
+    setStatus("供應商預設已更新");
     setSupplierName("");
     setSelectedSupplier(name);
   }
 
-  function addProductPreset() {
+  async function addProductPreset() {
     const supplier = selectedSupplier.trim();
     const name = productName.trim();
-    if (!supplier || !name || !user?.id) return;
+    if (!supplier || !name || !user?.id || user.role === "admin") return;
 
     const nextSuppliers = presets.suppliers.map((item) => {
       if (item.name !== supplier) return item;
@@ -61,14 +81,21 @@ export default function SettingsPage() {
       return { ...item, products: nextProducts };
     });
 
-    const nextPresets = { suppliers: nextSuppliers };
-    persistNextPresets(nextPresets, "產品預設已儲存");
+    const updatedSupplier = nextSuppliers.find((item) => item.name === supplier);
+    if (updatedSupplier) {
+      await saveSupplierPreset(user.id, updatedSupplier);
+    }
+    const nextPresets = { ...presets, suppliers: nextSuppliers };
+    setPresets(nextPresets);
+    setStatus("產品預設已儲存");
     setProductName("");
     setProductType("");
   }
 
-  function removeProductPreset(supplierNameToRemove: string, productNameToRemove: string) {
+  async function removeProductPreset(supplierNameToRemove: string, productNameToRemove: string) {
+    if (!user?.id || user.role === "admin") return;
     const nextPresets = {
+      ...presets,
       suppliers: presets.suppliers.map((supplier) =>
         supplier.name !== supplierNameToRemove
           ? supplier
@@ -78,7 +105,137 @@ export default function SettingsPage() {
             }
       ),
     };
-    persistNextPresets(nextPresets, "產品預設已刪除");
+    const updatedSupplier = nextPresets.suppliers.find((supplier) => supplier.name === supplierNameToRemove);
+    if (updatedSupplier) {
+      await saveSupplierPreset(user.id, updatedSupplier);
+    }
+    setPresets(nextPresets);
+    setStatus("產品預設已刪除");
+  }
+
+  async function removeSupplierPreset(name: string) {
+    if (!user?.id || user.role === "admin") return;
+    await deleteSupplierPreset(user.id, name);
+    const nextPresets = { ...presets, suppliers: presets.suppliers.filter((supplier) => supplier.name !== name) };
+    setPresets(nextPresets);
+    if (selectedSupplier === name) {
+      setSelectedSupplier(nextPresets.suppliers[0]?.name || "");
+    }
+    setStatus("供應商預設已刪除");
+  }
+
+  async function addCustomUnit() {
+    if (!user?.id || user.role === "admin") return;
+    const normalized = normalizeUnitValue(newCustomUnit);
+    if (!normalized || normalized === "unit") return;
+    const nextPresets = {
+      ...presets,
+      customUnits: Array.from(new Set([...presets.customUnits, normalized])),
+    };
+    await saveShopCustomUnits(user.id, nextPresets.customUnits);
+    setPresets(nextPresets);
+    setStatus("自訂單位已儲存");
+    setNewCustomUnit("");
+  }
+
+  async function removeCustomUnit(unitToDelete: string) {
+    if (!user?.id || user.role === "admin") return;
+    const nextUnits = presets.customUnits.filter((unit) => unit !== unitToDelete);
+    await saveShopCustomUnits(user.id, nextUnits);
+
+    const { data: receipts, error } = await supabase
+      .from("receipts")
+      .select("id, raw_ocr_data")
+      .eq("user_id", user.id);
+
+    if (error) throw error;
+
+    for (const receipt of receipts ?? []) {
+      const raw = typeof receipt.raw_ocr_data === "object" && receipt.raw_ocr_data !== null
+        ? receipt.raw_ocr_data as Record<string, unknown>
+        : {};
+      const itemMetadata = Array.isArray(raw.item_metadata) ? raw.item_metadata : [];
+      const nextMetadata = itemMetadata.map((item) => {
+        if (typeof item !== "object" || item === null) return item;
+        const metadata = item as Record<string, unknown>;
+        return metadata.quantity_unit === unitToDelete
+          ? { ...metadata, quantity_unit: "unit" }
+          : metadata;
+      });
+
+      await supabase
+        .from("receipts")
+        .update({ raw_ocr_data: { ...raw, item_metadata: nextMetadata } })
+        .eq("id", receipt.id)
+        .eq("user_id", user.id);
+    }
+
+    setPresets({ ...presets, customUnits: nextUnits });
+    setStatus("單位已刪除，相關記錄已回退為 個");
+  }
+
+  async function handleChangePassword() {
+    if (!user) return;
+    if (newPin.length !== 4 || confirmPin.length !== 4) {
+      setStatus("新密碼需為 4 位數字");
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setStatus("兩次輸入的新密碼不一致");
+      return;
+    }
+
+    if (user.role === "admin") {
+      const { data: adminRow } = await supabase
+        .from("shop_users")
+        .select("login_pin")
+        .eq("login_id", "60000000")
+        .maybeSingle();
+
+      const expectedCurrentPin = adminRow?.login_pin || "0000";
+      if (currentPin !== expectedCurrentPin) {
+        setStatus("目前密碼不正確");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("shop_users")
+        .upsert(
+          { shop_name: "系統管理員", login_id: "60000000", login_pin: newPin },
+          { onConflict: "login_id" }
+        );
+
+      if (error) {
+        setStatus(`更改密碼失敗: ${error.message}`);
+        return;
+      }
+    } else {
+      const { data: currentUser, error: fetchError } = await supabase
+        .from("shop_users")
+        .select("login_pin")
+        .eq("id", user.id)
+        .single();
+
+      if (fetchError || !currentUser || currentUser.login_pin !== currentPin) {
+        setStatus("目前密碼不正確");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("shop_users")
+        .update({ login_pin: newPin })
+        .eq("id", user.id);
+
+      if (error) {
+        setStatus(`更改密碼失敗: ${error.message}`);
+        return;
+      }
+    }
+
+    setCurrentPin("");
+    setNewPin("");
+    setConfirmPin("");
+    setStatus("密碼已更新");
   }
 
   const handleExport = async () => {
@@ -201,103 +358,204 @@ export default function SettingsPage() {
             <Package size={16} className="mr-2" /> 供應商與產品預設
           </h2>
 
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-              <input
-                type="text"
-                value={supplierName}
-                onChange={(e) => setSupplierName(e.target.value)}
-                placeholder="新增供應商，例如 JOHN"
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-              />
-              <button
-                onClick={addSupplierPreset}
-                className="rounded-xl bg-blue-600 text-white font-black px-4 py-3 inline-flex items-center justify-center"
-              >
-                <PlusCircle size={18} className="mr-2" /> 新增供應商
-              </button>
-            </div>
-
-            <div>
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">選擇供應商</label>
-              <select
-                value={selectedSupplier}
-                onChange={(e) => setSelectedSupplier(e.target.value)}
-                className="w-full mt-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-              >
-                <option value="">請選擇供應商</option>
-                {presets.suppliers.map((supplier) => (
-                  <option key={supplier.name} value={supplier.name}>{supplier.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input
-                type="text"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                placeholder="產品名稱，例如 Fish"
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-              />
-              <input
-                type="text"
-                value={productType}
-                onChange={(e) => setProductType(e.target.value)}
-                placeholder="產品分類，例如 海鮮"
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-              />
-              <select
-                value={defaultUnit}
-                onChange={(e) => setDefaultUnit(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-              >
-                <option value="kg">KG</option>
-                <option value="lb">Pound</option>
-                <option value="unit">個</option>
-              </select>
-            </div>
-            <button
-              onClick={addProductPreset}
-              disabled={!selectedSupplier}
-              className="w-full rounded-xl border border-blue-200 text-blue-600 font-black px-4 py-3 disabled:opacity-50"
-            >
-              為目前供應商加入產品預設
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {presets.suppliers.length === 0 ? (
-              <div className="text-sm text-gray-400">尚未設定任何供應商或產品預設。</div>
-            ) : (
-              presets.suppliers.map((supplier) => (
-                <div key={supplier.name} className="border border-gray-100 rounded-2xl p-4">
-                  <div className="font-black text-gray-800">{supplier.name}</div>
-                  {supplier.products.length === 0 ? (
-                    <div className="text-xs text-gray-400 mt-2">未設定產品預設</div>
-                  ) : (
-                    <div className="mt-3 space-y-2">
-                      {supplier.products.map((product) => (
-                        <div key={`${supplier.name}-${product.name}`} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-                          <div>
-                            <div className="font-bold text-sm">{product.name}</div>
-                            <div className="text-[10px] text-gray-400">
-                              {product.product_type || "未分類"} • {product.default_unit || "個"}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => removeProductPreset(supplier.name, product.name)}
-                            className="text-red-500 text-xs font-black"
-                          >
-                            刪除
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+          {loadingPresets ? (
+            <div className="text-sm text-gray-400">預設資料載入中...</div>
+          ) : user.role === "admin" ? (
+            <div className="text-sm text-gray-400">管理員賬戶不使用供應商預設。</div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+                  <input
+                    type="text"
+                    value={supplierName}
+                    onChange={(e) => setSupplierName(e.target.value)}
+                    placeholder="新增供應商，例如 JOHN"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+                  />
+                  <button
+                    onClick={addSupplierPreset}
+                    className="rounded-xl bg-blue-600 text-white font-black px-4 py-3 inline-flex items-center justify-center"
+                  >
+                    <PlusCircle size={18} className="mr-2" /> 新增供應商
+                  </button>
                 </div>
-              ))
-            )}
+
+                <div>
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest">選擇供應商</label>
+                  <select
+                    value={selectedSupplier}
+                    onChange={(e) => setSelectedSupplier(e.target.value)}
+                    className="w-full mt-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+                  >
+                    <option value="">請選擇供應商</option>
+                    {presets.suppliers.map((supplier) => (
+                      <option key={supplier.name} value={supplier.name}>{supplier.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    value={productName}
+                    onChange={(e) => setProductName(e.target.value)}
+                    placeholder="產品名稱，例如 Fish"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+                  />
+                  <input
+                    type="text"
+                    value={productType}
+                    onChange={(e) => setProductType(e.target.value)}
+                    placeholder="產品分類，例如 海鮮"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+                  />
+                  <select
+                    value={defaultUnit}
+                    onChange={(e) => setDefaultUnit(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+                  >
+                    <option value="kg">KG</option>
+                    <option value="lb">Pound</option>
+                    <option value="unit">個</option>
+                  </select>
+                </div>
+                <button
+                  onClick={addProductPreset}
+                  disabled={!selectedSupplier}
+                  className="w-full rounded-xl border border-blue-200 text-blue-600 font-black px-4 py-3 disabled:opacity-50"
+                >
+                  為目前供應商加入產品預設
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {presets.suppliers.length === 0 ? (
+                  <div className="text-sm text-gray-400">尚未設定任何供應商或產品預設。</div>
+                ) : (
+                  presets.suppliers.map((supplier) => (
+                    <div key={supplier.name} className="border border-gray-100 rounded-2xl p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="font-black text-gray-800">{supplier.name}</div>
+                        <button
+                          onClick={() => void removeSupplierPreset(supplier.name)}
+                          className="text-red-500 text-xs font-black"
+                        >
+                          移除預設
+                        </button>
+                      </div>
+                      {supplier.products.length === 0 ? (
+                        <div className="text-xs text-gray-400 mt-2">未設定產品預設</div>
+                      ) : (
+                        <div className="mt-3 space-y-2">
+                          {supplier.products.map((product) => (
+                            <div key={`${supplier.name}-${product.name}`} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                              <div>
+                                <div className="font-bold text-sm">{product.name}</div>
+                                <div className="text-[10px] text-gray-400">
+                                  {product.product_type || "未分類"} • {product.default_unit || "個"}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => void removeProductPreset(supplier.name, product.name)}
+                                className="text-red-500 text-xs font-black"
+                              >
+                                刪除
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="card space-y-5">
+          <h2 className="text-sm font-bold text-gray-400 uppercase flex items-center">
+            <Ruler size={16} className="mr-2" /> 自訂單位
+          </h2>
+          {user.role === "admin" ? (
+            <div className="text-sm text-gray-400">管理員賬戶不使用採購單位設定。</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+                <input
+                  type="text"
+                  value={newCustomUnit}
+                  onChange={(e) => setNewCustomUnit(e.target.value)}
+                  placeholder="新增單位，例如 箱 或 pack"
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+                />
+                <button
+                  onClick={addCustomUnit}
+                  className="rounded-xl bg-blue-600 text-white font-black px-4 py-3 inline-flex items-center justify-center"
+                >
+                  <PlusCircle size={18} className="mr-2" /> 新增單位
+                </button>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                  <div className="font-bold text-sm">個</div>
+                  <div className="text-xs text-gray-400 font-black">預設</div>
+                </div>
+                {presets.customUnits.map((unit) => (
+                  <div key={unit} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                    <div className="font-bold text-sm">{getUnitLabel(unit)}</div>
+                    <button
+                      onClick={() => void removeCustomUnit(unit)}
+                      className="text-red-500 text-xs font-black"
+                    >
+                      刪除
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="card space-y-5">
+          <h2 className="text-sm font-bold text-gray-400 uppercase flex items-center">
+            <KeyRound size={16} className="mr-2" /> 更改密碼
+          </h2>
+          <div className="space-y-3">
+            <input
+              type="password"
+              maxLength={4}
+              inputMode="numeric"
+              value={currentPin}
+              onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))}
+              placeholder="目前密碼"
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold tracking-widest"
+            />
+            <input
+              type="password"
+              maxLength={4}
+              inputMode="numeric"
+              value={newPin}
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+              placeholder="新密碼（4 位數字）"
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold tracking-widest"
+            />
+            <input
+              type="password"
+              maxLength={4}
+              inputMode="numeric"
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
+              placeholder="再次輸入新密碼"
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold tracking-widest"
+            />
+            <button
+              onClick={handleChangePassword}
+              className="w-full rounded-xl bg-blue-600 text-white font-black px-4 py-3"
+            >
+              更新密碼
+            </button>
           </div>
         </section>
 

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Lock, Store, AlertCircle, ArrowLeft } from "lucide-react";
+import { setShopUserSession } from "@/lib/auth";
+import { Loader2, Store, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -18,6 +19,10 @@ export default function SignupPage() {
     e.preventDefault();
     if (loginId.length !== 8 || pin.length !== 4 || !shopName) {
       setError("請填寫完整的商店名稱、8 位賬號與 4 位密碼");
+      return;
+    }
+    if (loginId === "60000000") {
+      setError("此賬號為系統保留，請使用其他 8 位賬號");
       return;
     }
 
@@ -48,10 +53,10 @@ export default function SignupPage() {
       if (dbError) throw dbError;
 
       // 3. Auto login after signup
-      localStorage.setItem("shop_user", JSON.stringify(data));
+      setShopUserSession({ ...data, role: "user" });
       router.push("/");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "註冊失敗");
     } finally {
       setLoading(false);
     }

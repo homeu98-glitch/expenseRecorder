@@ -10,11 +10,12 @@ import { playPaidSound } from "@/lib/feedback";
 import { normalizeReportReceipts, type ReportReceipt } from "@/lib/reporting";
 
 export default function PaymentsPage() {
-  const [user] = useState<{ id: string } | null>(() => getShopUser());
+  const [user] = useState<{ id: string; role?: string } | null>(() => getShopUser());
   const [tab, setTab] = useState<"unpaid" | "paid">("unpaid");
   const [loading, setLoading] = useState(() => Boolean(getShopUser()?.id));
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [pendingPaymentIds, setPendingPaymentIds] = useState<string[]>([]);
 
   async function loadReceipts(userId: string) {
     setLoading(true);
@@ -59,6 +60,12 @@ export default function PaymentsPage() {
   async function toggleStatus(receipt: ReportReceipt) {
     if (!user?.id) return;
     const nextStatus = receipt.payment_status === "paid" ? "unpaid" : "paid";
+    setPendingPaymentIds((current) => [...current, receipt.id]);
+    setReceipts((current) =>
+      current.map((item) =>
+        item.id === receipt.id ? { ...item, payment_status: nextStatus } : item
+      )
+    );
     try {
       const response = await fetch(`/api/db/receipt/${receipt.id}`, {
         method: "PATCH",
@@ -66,19 +73,21 @@ export default function PaymentsPage() {
         body: JSON.stringify({ userId: user.id, payment_status: nextStatus }),
       });
       if (!response.ok) throw new Error("更新付款狀態失敗");
-      setReceipts((current) =>
-        current.map((item) =>
-          item.id === receipt.id ? { ...item, payment_status: nextStatus } : item
-        )
-      );
       if (nextStatus === "paid") {
         playPaidSound();
         setShowConfetti(true);
         window.setTimeout(() => setShowConfetti(false), 1000);
       }
     } catch (error) {
+      setReceipts((current) =>
+        current.map((item) =>
+          item.id === receipt.id ? { ...item, payment_status: receipt.payment_status } : item
+        )
+      );
       console.error(error);
       alert(error instanceof Error ? error.message : "更新付款狀態失敗");
+    } finally {
+      setPendingPaymentIds((current) => current.filter((id) => id !== receipt.id));
     }
   }
 
@@ -150,13 +159,16 @@ export default function PaymentsPage() {
                     <div className="font-bold text-lg">${receipt.total_amount.toLocaleString()}</div>
                     <button
                       onClick={() => void toggleStatus(receipt)}
-                      className={`mt-2 text-xs font-black px-3 py-1.5 rounded-full ${
+                      disabled={pendingPaymentIds.includes(receipt.id)}
+                      className={`mt-2 text-xs font-black px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-60 ${
                         receipt.payment_status === "paid"
-                          ? "bg-green-50 text-green-600"
-                          : "bg-amber-50 text-amber-600"
+                          ? "bg-green-50 text-green-600 border-green-200 shadow-sm"
+                          : "bg-amber-50 text-amber-600 border-amber-200 shadow-sm"
                       }`}
                     >
-                      {receipt.payment_status === "paid" ? (
+                      {pendingPaymentIds.includes(receipt.id) ? (
+                        <span className="inline-flex items-center"><Loader2 size={12} className="mr-1 animate-spin" />處理中</span>
+                      ) : receipt.payment_status === "paid" ? (
                         <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />已付款</span>
                       ) : (
                         <span className="inline-flex items-center"><Circle size={12} className="mr-1" />未付款</span>
