@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Shield, Database, Trash2, ArrowLeft, LogOut, Download, CheckCircle2, PlusCircle, Package, KeyRound, Ruler } from "lucide-react";
 import Link from "next/link";
 import { getShopUser, logout } from "@/lib/auth";
@@ -23,8 +23,8 @@ export default function SettingsPage() {
   const [supplierName, setSupplierName] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [productName, setProductName] = useState("");
-  const [productType, setProductType] = useState("");
   const [defaultUnit, setDefaultUnit] = useState("kg");
+  const [actualProductsBySupplier, setActualProductsBySupplier] = useState<Record<string, string[]>>({});
   const [newCustomUnit, setNewCustomUnit] = useState("");
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -38,8 +38,37 @@ export default function SettingsPage() {
     void (async () => {
       try {
         const loaded = await loadShopPresets(user.id);
+        const { data: receipts } = await supabase
+          .from("receipts")
+          .select(`
+            merchants(name),
+            receipt_items(name)
+          `)
+          .eq("user_id", user.id);
+
+        const nextActualProducts = new Map<string, Set<string>>();
+        (receipts ?? []).forEach((receipt) => {
+          const merchantRelation = receipt.merchants as { name?: string } | Array<{ name?: string }> | null;
+          const merchantName = Array.isArray(merchantRelation)
+            ? merchantRelation[0]?.name
+            : merchantRelation?.name;
+
+          if (!merchantName) return;
+          const itemSet = nextActualProducts.get(merchantName) ?? new Set<string>();
+          (receipt.receipt_items ?? []).forEach((item: { name?: string }) => {
+            if (!item.name?.trim()) return;
+            itemSet.add(item.name.trim());
+          });
+          nextActualProducts.set(merchantName, itemSet);
+        });
+
         setPresets(loaded);
         setSelectedSupplier((current) => current || loaded.suppliers[0]?.name || "");
+        setActualProductsBySupplier(
+          Object.fromEntries(
+            Array.from(nextActualProducts.entries()).map(([supplier, products]) => [supplier, Array.from(products).sort()])
+          )
+        );
       } catch (error) {
         console.error(error);
         setStatus("預設資料載入失敗");
@@ -74,10 +103,10 @@ export default function SettingsPage() {
       const nextProducts = existing
         ? item.products.map((product) =>
             product.name.toLowerCase() === name.toLowerCase()
-              ? { ...product, product_type: productType.trim() || undefined, default_unit: defaultUnit }
+              ? { ...product, default_unit: defaultUnit }
               : product
           )
-        : [...item.products, { name, product_type: productType.trim() || undefined, default_unit: defaultUnit }];
+        : [...item.products, { name, default_unit: defaultUnit }];
       return { ...item, products: nextProducts };
     });
 
@@ -89,7 +118,6 @@ export default function SettingsPage() {
     setPresets(nextPresets);
     setStatus("產品預設已儲存");
     setProductName("");
-    setProductType("");
   }
 
   async function removeProductPreset(supplierNameToRemove: string, productNameToRemove: string) {
@@ -284,6 +312,28 @@ export default function SettingsPage() {
     }
   };
 
+  const mergedSupplierProducts = useMemo(() => {
+    return Object.fromEntries(
+      presets.suppliers.map((supplier) => {
+        const presetProducts = supplier.products.map((product) => ({
+          name: product.name,
+          default_unit: product.default_unit,
+          source: "preset" as const,
+        }));
+        const presetNames = new Set(presetProducts.map((product) => product.name.toLowerCase()));
+        const actualProducts = (actualProductsBySupplier[supplier.name] || [])
+          .filter((productName) => !presetNames.has(productName.toLowerCase()))
+          .map((productName) => ({
+            name: productName,
+            default_unit: undefined,
+            source: "history" as const,
+          }));
+
+        return [supplier.name, [...presetProducts, ...actualProducts]];
+      })
+    ) as Record<string, Array<{ name: string; default_unit?: string; source: "preset" | "history" }>>;
+  }, [actualProductsBySupplier, presets.suppliers]);
+
   if (!user) return null;
 
   return (
@@ -395,19 +445,12 @@ export default function SettingsPage() {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input
                     type="text"
                     value={productName}
                     onChange={(e) => setProductName(e.target.value)}
                     placeholder="產品名稱，例如 Fish"
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-                  />
-                  <input
-                    type="text"
-                    value={productType}
-                    onChange={(e) => setProductType(e.target.value)}
-                    placeholder="產品分類，例如 海鮮"
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
                   />
                   <select
@@ -445,23 +488,33 @@ export default function SettingsPage() {
                         </button>
                       </div>
                       {supplier.products.length === 0 ? (
-                        <div className="text-xs text-gray-400 mt-2">未設定產品預設</div>
+                        (actualProductsBySupplier[supplier.name] || []).length === 0 ? (
+                          <div className="text-xs text-gray-400 mt-2">未設定產品，亦未有歷史記錄</div>
+                        ) : null
                       ) : (
+                        null
+                      )}
+                      {mergedSupplierProducts[supplier.name]?.length > 0 && (
                         <div className="mt-3 space-y-2">
-                          {supplier.products.map((product) => (
+                          {mergedSupplierProducts[supplier.name].map((product) => (
                             <div key={`${supplier.name}-${product.name}`} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
                               <div>
                                 <div className="font-bold text-sm">{product.name}</div>
                                 <div className="text-[10px] text-gray-400">
-                                  {product.product_type || "未分類"} • {product.default_unit || "個"}
+                                  {product.default_unit || "個"}
+                                  {product.source === "history" ? " • 歷史記錄" : " • 預設"}
                                 </div>
                               </div>
-                              <button
-                                onClick={() => void removeProductPreset(supplier.name, product.name)}
-                                className="text-red-500 text-xs font-black"
-                              >
-                                刪除
-                              </button>
+                              {product.source === "preset" ? (
+                                <button
+                                  onClick={() => void removeProductPreset(supplier.name, product.name)}
+                                  className="text-red-500 text-xs font-black"
+                                >
+                                  刪除
+                                </button>
+                              ) : (
+                                <div className="text-[10px] text-gray-400 font-black">唯讀</div>
+                              )}
                             </div>
                           ))}
                         </div>
