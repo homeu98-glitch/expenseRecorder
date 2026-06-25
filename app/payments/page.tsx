@@ -20,6 +20,7 @@ export default function PaymentsPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [pendingPaymentIds, setPendingPaymentIds] = useState<string[]>([]);
   const tab = searchParams.get("tab") === "paid" ? "paid" : searchParams.get("tab") === "unpaid" ? "unpaid" : manualTab;
+  const [paymentMethodTab, setPaymentMethodTab] = useState<string>("all");
 
   async function loadReceipts(userId: string) {
     setLoading(true);
@@ -106,20 +107,22 @@ export default function PaymentsPage() {
     }
   }
 
-  const groupedReceipts = useMemo(() => {
-    const groups = new Map<string, ReportReceipt[]>();
-    visibleReceipts.forEach((receipt) => {
-      const key = receipt.payment_method || "on_delivery";
-      const existing = groups.get(key) ?? [];
-      existing.push(receipt);
-      groups.set(key, existing);
-    });
-    return Array.from(groups.entries()).map(([key, items]) => ({
-      key,
-      title: getPaymentMethodLabel(key),
-      items,
-    }));
+  const paymentMethodTabs = useMemo(() => {
+    const methods = Array.from(new Set(visibleReceipts.map((receipt) => receipt.payment_method || "on_delivery")));
+    return [
+      { key: "all", label: "全部方式" },
+      ...methods.map((method) => ({ key: method, label: getPaymentMethodLabel(method) })),
+    ];
   }, [visibleReceipts]);
+  const effectivePaymentMethodTab = paymentMethodTabs.some((item) => item.key === paymentMethodTab)
+    ? paymentMethodTab
+    : "all";
+  const filteredByMethodReceipts = useMemo(
+    () => effectivePaymentMethodTab === "all"
+      ? visibleReceipts
+      : visibleReceipts.filter((receipt) => (receipt.payment_method || "on_delivery") === effectivePaymentMethodTab),
+    [effectivePaymentMethodTab, visibleReceipts]
+  );
 
   return (
     <div className="space-y-6 pb-24">
@@ -162,54 +165,65 @@ export default function PaymentsPage() {
         </div>
       </div>
 
+      <div className="flex space-x-2 overflow-x-auto pb-1">
+        {paymentMethodTabs.map((option) => (
+          <button
+            key={option.key}
+            onClick={() => setPaymentMethodTab(option.key)}
+            className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+              effectivePaymentMethodTab === option.key
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
+                : "bg-white text-gray-500 border border-gray-100 hover:border-blue-200"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="card py-12 flex flex-col items-center justify-center text-gray-400">
           <Loader2 className="animate-spin mb-2" size={28} />
           <p className="text-sm font-medium">付款資料載入中...</p>
         </div>
-      ) : visibleReceipts.length === 0 ? (
+      ) : filteredByMethodReceipts.length === 0 ? (
         <div className="card py-10 text-center text-gray-400">目前沒有此狀態的收據。</div>
       ) : (
         <div className="space-y-3">
-          {groupedReceipts.map((group) => (
-            <section key={group.key} className="space-y-3">
-              <div className="px-1 text-xs font-black tracking-widest text-gray-400 uppercase">{group.title}</div>
-              {group.items.map((receipt) => (
-                <div key={receipt.id} className="card p-4 flex items-center justify-between gap-4">
-                  <Link href={`/edit/${receipt.id}`} className="flex-1 min-w-0">
-                    <div className="font-bold">{receipt.merchant_name}</div>
-                    <div className="text-xs text-gray-400">
-                      {receipt.receipt_date}
-                      {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
-                      {receipt.payment_method ? ` • ${getPaymentMethodLabel(receipt.payment_method)}` : ""}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 truncate">
-                      {receipt.items.map((item) => item.name).join("、")}
-                    </div>
-                  </Link>
-                  <div className="text-right">
-                    <div className="font-bold text-lg">${receipt.total_amount.toLocaleString()}</div>
-                    <button
-                      onClick={() => void toggleStatus(receipt)}
-                      disabled={pendingPaymentIds.includes(receipt.id)}
-                      className={`mt-2 text-xs font-black px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-60 ${
-                        receipt.payment_status === "paid"
-                          ? "bg-green-50 text-green-600 border-green-200 shadow-sm"
-                          : "bg-amber-50 text-amber-600 border-amber-200 shadow-sm"
-                      }`}
-                    >
-                      {pendingPaymentIds.includes(receipt.id) ? (
-                        <span className="inline-flex items-center"><Loader2 size={12} className="mr-1 animate-spin" />處理中</span>
-                      ) : receipt.payment_status === "paid" ? (
-                        <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />{getPaymentStatusLabel(receipt.payment_status)}</span>
-                      ) : (
-                        <span className="inline-flex items-center"><Circle size={12} className="mr-1" />{getPaymentStatusLabel(receipt.payment_status)}</span>
-                      )}
-                    </button>
-                  </div>
+          {filteredByMethodReceipts.map((receipt) => (
+            <div key={receipt.id} className="card p-4 flex items-center justify-between gap-4">
+              <Link href={`/edit/${receipt.id}`} className="flex-1 min-w-0">
+                <div className="font-bold">{receipt.merchant_name}</div>
+                <div className="text-xs text-gray-400">
+                  {receipt.receipt_date}
+                  {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
+                  {receipt.payment_method ? ` • ${getPaymentMethodLabel(receipt.payment_method)}` : ""}
                 </div>
-              ))}
-            </section>
+                <div className="text-xs text-gray-500 mt-1 truncate">
+                  {receipt.items.map((item) => item.name).join("、")}
+                </div>
+              </Link>
+              <div className="text-right">
+                <div className="font-bold text-lg">${receipt.total_amount.toLocaleString()}</div>
+                <button
+                  onClick={() => void toggleStatus(receipt)}
+                  disabled={pendingPaymentIds.includes(receipt.id)}
+                  className={`mt-2 text-xs font-black px-3 py-1.5 rounded-full border transition-all active:scale-95 disabled:opacity-60 ${
+                    receipt.payment_status === "paid"
+                      ? "bg-green-50 text-green-600 border-green-200 shadow-sm"
+                      : "bg-amber-50 text-amber-600 border-amber-200 shadow-sm"
+                  }`}
+                >
+                  {pendingPaymentIds.includes(receipt.id) ? (
+                    <span className="inline-flex items-center"><Loader2 size={12} className="mr-1 animate-spin" />處理中</span>
+                  ) : receipt.payment_status === "paid" ? (
+                    <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />{getPaymentStatusLabel(receipt.payment_status)}</span>
+                  ) : (
+                    <span className="inline-flex items-center"><Circle size={12} className="mr-1" />{getPaymentStatusLabel(receipt.payment_status)}</span>
+                  )}
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -6,11 +6,12 @@ import {
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell
 } from "recharts";
 import { Shield, Users, Receipt, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { clsx } from "clsx";
 import { getShopUser } from "@/lib/auth";
 import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labels";
+import { getInputMethodLabel } from "@/lib/input-method-labels";
 import { supabase } from "@/lib/supabase";
+import { AdminReceiptInspector } from "@/components/AdminReceiptInspector";
 import {
   buildItemRows,
   buildMonthlyExpenses,
@@ -41,6 +42,8 @@ export default function AdminPage() {
   const [filter, setFilter] = useState<DashboardFilter>("all");
   const [itemPage, setItemPage] = useState(1);
   const [receiptPage, setReceiptPage] = useState(1);
+  const [openReceiptTabs, setOpenReceiptTabs] = useState<Array<{ id: string; label: string }>>([]);
+  const [activeReceiptTabId, setActiveReceiptTabId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.role !== "admin") {
@@ -131,6 +134,18 @@ export default function AdminPage() {
     () => Object.fromEntries(accounts.map((account) => [account.id, account.shop_name])) as Record<string, string>,
     [accounts]
   );
+  const inputMethodStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    filteredReceipts.forEach((receipt) => {
+      const key = receipt.input_method || "unknown";
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return Array.from(counts.entries()).map(([key, count]) => ({
+      key,
+      label: getInputMethodLabel(key),
+      count,
+    }));
+  }, [filteredReceipts]);
 
   function renderPager(page: number, totalPages: number, setPage: (value: number) => void) {
     if (totalPages <= 1) return null;
@@ -153,6 +168,32 @@ export default function AdminPage() {
         </button>
       </div>
     );
+  }
+
+  function openReceiptTab(receipt: ReportReceipt) {
+    setOpenReceiptTabs((current) => {
+      if (current.some((tab) => tab.id === receipt.id)) {
+        return current;
+      }
+      return [
+        ...current,
+        {
+          id: receipt.id,
+          label: `${receipt.merchant_name}${receipt.receipt_number ? ` #${receipt.receipt_number}` : ""}`,
+        },
+      ];
+    });
+    setActiveReceiptTabId(receipt.id);
+  }
+
+  function closeReceiptTab(receiptId: string) {
+    setOpenReceiptTabs((current) => {
+      const next = current.filter((tab) => tab.id !== receiptId);
+      if (activeReceiptTabId === receiptId) {
+        setActiveReceiptTabId(next[next.length - 1]?.id || null);
+      }
+      return next;
+    });
   }
 
   if (user?.role !== "admin") {
@@ -188,9 +229,9 @@ export default function AdminPage() {
             <div className="card p-5">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-gray-500 text-sm font-bold">查看指定賬戶</div>
-                <Link href="/admin/accounts" className="text-xs font-black text-blue-600">
+                <a href="/admin/accounts" className="text-xs font-black text-blue-600">
                   賬戶管理
-                </Link>
+                </a>
               </div>
               <select
                 value={selectedAccountId}
@@ -241,6 +282,22 @@ export default function AdminPage() {
                   <Bar dataKey="amount" fill="#1a73e8" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-black text-gray-700">收據輸入方式</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {inputMethodStats.map((item) => (
+                <div key={item.key} className="card p-4">
+                  <div className="text-xs text-gray-400 font-black">方式</div>
+                  <div className="font-black text-lg mt-1">{item.label}</div>
+                  <div className="text-2xl font-black text-blue-600 mt-2">{item.count}</div>
+                </div>
+              ))}
+              {inputMethodStats.length === 0 && (
+                <div className="card p-4 text-sm text-gray-400">目前沒有輸入方式資料。</div>
+              )}
             </div>
           </section>
 
@@ -362,7 +419,12 @@ export default function AdminPage() {
             </div>
             <div className="space-y-3">
               {paginatedReceipts.map((receipt) => (
-                <Link key={receipt.id} href={`/admin/receipts/${receipt.id}`} target="_blank" rel="noreferrer" className="card p-4 flex items-start justify-between gap-4 hover:border-blue-200 transition-all">
+                <button
+                  key={receipt.id}
+                  type="button"
+                  onClick={() => openReceiptTab(receipt)}
+                  className="card p-4 flex items-start justify-between gap-4 hover:border-blue-200 transition-all w-full text-left"
+                >
                   <div className="min-w-0">
                     <div className="font-black">{receipt.merchant_name}</div>
                     <div className="text-xs text-gray-400">
@@ -370,6 +432,9 @@ export default function AdminPage() {
                       {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
                       {receipt.payment_method ? ` • ${getPaymentMethodLabel(receipt.payment_method)}` : ""}
                       {receipt.payment_status ? ` • ${getPaymentStatusLabel(receipt.payment_status)}` : ""}
+                    </div>
+                    <div className="text-xs text-blue-600 font-black mt-1">
+                      {getInputMethodLabel(receipt.input_method)}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 truncate">
                       {receipt.items.map((item) => item.name).join("、")}
@@ -379,7 +444,7 @@ export default function AdminPage() {
                     <div className="font-black text-lg">${receipt.total_amount.toLocaleString()}</div>
                     <div className="text-[10px] text-blue-600 font-black mt-1">查看明細</div>
                   </div>
-                </Link>
+                </button>
               ))}
               {filteredReceipts.length === 0 && (
                 <div className="card py-10 text-center text-gray-400">目前沒有可檢視的收據。</div>
@@ -387,6 +452,36 @@ export default function AdminPage() {
             </div>
             {renderPager(effectiveReceiptPage, receiptTotalPages, setReceiptPage)}
           </section>
+
+          {openReceiptTabs.length > 0 && activeReceiptTabId && (
+            <section className="space-y-3">
+              <h2 className="text-lg font-black text-gray-700">收據檢視分頁</h2>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {openReceiptTabs.map((tab) => (
+                  <div key={tab.id} className={clsx(
+                    "flex items-center gap-2 rounded-full border px-4 py-2 whitespace-nowrap",
+                    activeReceiptTabId === tab.id ? "border-blue-500 bg-blue-50 text-blue-600" : "border-gray-200 bg-white text-gray-500"
+                  )}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveReceiptTabId(tab.id)}
+                      className="text-sm font-black"
+                    >
+                      {tab.label}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => closeReceiptTab(tab.id)}
+                      className="text-xs font-black"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <AdminReceiptInspector receiptId={activeReceiptTabId} />
+            </section>
+          )}
         </>
       )}
     </div>

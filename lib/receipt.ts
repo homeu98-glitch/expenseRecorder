@@ -14,6 +14,7 @@ export type ReceiptDraft = {
   receipt_number?: string;
   payment_method?: string;
   payment_status?: string;
+  input_method?: string;
   date: string;
   total_amount: number;
   items: ReceiptDraftItem[];
@@ -211,6 +212,9 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
     payment_status: String(
       getFirstDefined(payload, ["payment_status"]) ?? ""
     ).trim() || "unpaid",
+    input_method: String(
+      getFirstDefined(payload, ["input_method"]) ?? ""
+    ).trim() || undefined,
     date: normalizeDate(getFirstDefined(payload, ["date", "receipt_date", "transaction_date"])),
     total_amount: totalAmount > 0 ? totalAmount : calculatedTotal,
     items,

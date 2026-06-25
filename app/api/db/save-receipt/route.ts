@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       receipt_number,
       payment_method,
       payment_status,
+      input_method,
       date,
       total_amount,
       items,
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
         receipt_number: receipt_number || null,
         payment_method: payment_method || "on_delivery",
         payment_status: payment_status || "unpaid",
+        input_method: input_method || "unknown",
         image_data_url: typeof image_data_url === "string" ? image_data_url : null,
         item_metadata: (Array.isArray(items) ? (items as ReceiptItemInput[]) : []).map((item) => ({
           name: item.name,

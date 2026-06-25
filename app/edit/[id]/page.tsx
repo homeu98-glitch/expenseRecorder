@@ -163,6 +163,7 @@ export default function EditReceiptPage() {
           receipt_number: receipt.raw_ocr_data?.receipt_number,
           payment_method: receipt.raw_ocr_data?.payment_method,
           payment_status: receipt.raw_ocr_data?.payment_status,
+          input_method: receipt.raw_ocr_data?.input_method,
           date: receipt.receipt_date,
           total_amount: receipt.total_amount,
           image_data_url: receipt.raw_ocr_data?.image_data_url,

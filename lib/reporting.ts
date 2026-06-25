@@ -33,6 +33,7 @@ export type ReportReceipt = {
   receipt_number: string | null;
   payment_method: string;
   payment_status: string;
+  input_method: string;
   image_url: string | null;
   items: ReportItemRow[];
 };
@@ -171,6 +172,7 @@ export function normalizeReportReceipts(input: unknown): ReportReceipt[] {
       const createdAt = typeof row.created_at === "string" ? row.created_at : null;
       const paymentMethod = getRawValue(row.raw_ocr_data, "payment_method") ?? "on_delivery";
       const paymentStatus = getRawValue(row.raw_ocr_data, "payment_status") ?? "unpaid";
+      const inputMethod = getRawValue(row.raw_ocr_data, "input_method") ?? "unknown";
       const imageUrl = typeof row.image_url === "string" ? row.image_url : null;
       const itemMetadata = Array.isArray((row.raw_ocr_data as UnknownRecord | undefined)?.item_metadata)
         ? ((row.raw_ocr_data as UnknownRecord).item_metadata as unknown[])
@@ -223,6 +225,7 @@ export function normalizeReportReceipts(input: unknown): ReportReceipt[] {
         receipt_number: receiptNumber,
         payment_method: paymentMethod,
         payment_status: paymentStatus,
+        input_method: inputMethod,
         image_url: imageUrl,
         items,
       };

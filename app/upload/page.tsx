@@ -46,18 +46,20 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [previewMimeType, setPreviewMimeType] = useState<string>("image/jpeg");
+  const [selectedInputMethod, setSelectedInputMethod] = useState<"camera" | "gallery">("camera");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, inputMethod: "camera" | "gallery") => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
     void (async () => {
       try {
         const compressed = await compressImage(selectedFile);
+        setSelectedInputMethod(inputMethod);
         setFile(selectedFile);
         setPreview(compressed.previewUrl);
         setPreviewMimeType(compressed.mimeType);
@@ -97,7 +99,7 @@ export default function UploadPage() {
       }
 
       // 3. Store result locally for the edit page
-      persistReceiptDraft({ ...normalized, image_data_url: preview });
+      persistReceiptDraft({ ...normalized, image_data_url: preview, input_method: selectedInputMethod });
       window.location.href = "/edit/new?source=ai";
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "處理收據時出錯，請重試。");
@@ -135,7 +137,7 @@ export default function UploadPage() {
             <input
               type="file"
               ref={cameraInputRef}
-              onChange={handleFileChange}
+              onChange={(e) => handleFileChange(e, "camera")}
               accept="image/*"
               capture="environment"
               className="hidden"
@@ -156,7 +158,7 @@ export default function UploadPage() {
             <input
               type="file"
               ref={galleryInputRef}
-              onChange={handleFileChange}
+              onChange={(e) => handleFileChange(e, "gallery")}
               accept="image/*"
               className="hidden"
             />
@@ -172,6 +174,7 @@ export default function UploadPage() {
                 receipt_number: "",
                 payment_method: "on_delivery",
                 payment_status: "unpaid",
+                input_method: "manual",
               });
               window.location.href = "/edit/new?source=manual";
             }}
