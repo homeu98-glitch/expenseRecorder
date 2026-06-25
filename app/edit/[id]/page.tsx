@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import { playSuccessSound, playPaidSound } from "@/lib/feedback";
 import { getUnitLabel, isReservedMerchantName, loadShopPresets, normalizeUnitValue } from "@/lib/account-settings";
+import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labels";
 import {
   normalizeReceiptDraft,
   readPersistedReceiptDraft,
@@ -482,9 +483,9 @@ export default function EditReceiptPage() {
                 onChange={(e) => setData({ ...data, payment_method: e.target.value })}
                 className="w-full font-bold border-b border-gray-100 py-2 outline-none focus:border-blue-500 bg-transparent"
               >
-                <option value="on_delivery">交貨付款</option>
-                <option value="monthly">月結</option>
-                <option value="pay_later">稍後付款</option>
+                <option value="on_delivery">{getPaymentMethodLabel("on_delivery")}</option>
+                <option value="monthly">{getPaymentMethodLabel("monthly")}</option>
+                <option value="pay_later">{getPaymentMethodLabel("pay_later")}</option>
               </select>
             </div>
             <div>
@@ -494,8 +495,8 @@ export default function EditReceiptPage() {
                 onChange={(e) => setData({ ...data, payment_status: e.target.value })}
                 className="w-full font-bold border-b border-gray-100 py-2 outline-none focus:border-blue-500 bg-transparent"
               >
-                <option value="unpaid">未付款</option>
-                <option value="paid">已付款</option>
+                <option value="unpaid">{getPaymentStatusLabel("unpaid")}</option>
+                <option value="paid">{getPaymentStatusLabel("paid")}</option>
               </select>
             </div>
           </div>

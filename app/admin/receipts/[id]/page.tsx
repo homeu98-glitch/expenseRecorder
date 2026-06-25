@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { getUnitLabel } from "@/lib/account-settings";
+import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labels";
 import { normalizeReceiptDraft, type ReceiptDraft } from "@/lib/receipt";
 
 type ShopOwner = {
@@ -191,11 +192,11 @@ export default function AdminReceiptDetailPage() {
               </div>
               <div>
                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">付款方式</div>
-                <div className="font-bold">{data.payment_method}</div>
+                <div className="font-bold">{getPaymentMethodLabel(data.payment_method)}</div>
               </div>
               <div>
                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">付款狀態</div>
-                <div className="font-bold">{data.payment_status}</div>
+                <div className="font-bold">{getPaymentStatusLabel(data.payment_status)}</div>
               </div>
             </div>
           </section>

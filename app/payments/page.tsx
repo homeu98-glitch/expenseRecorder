@@ -8,6 +8,7 @@ import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import { playPaidSound } from "@/lib/feedback";
+import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labels";
 import { normalizeReportReceipts, type ReportReceipt } from "@/lib/reporting";
 
 export default function PaymentsPage() {
@@ -106,12 +107,18 @@ export default function PaymentsPage() {
   }
 
   const groupedReceipts = useMemo(() => {
-    const monthly = visibleReceipts.filter((receipt) => receipt.payment_method === "monthly");
-    const others = visibleReceipts.filter((receipt) => receipt.payment_method !== "monthly");
-    return [
-      { key: "monthly", title: "月結", items: monthly },
-      { key: "others", title: "其他付款方式", items: others },
-    ].filter((group) => group.items.length > 0);
+    const groups = new Map<string, ReportReceipt[]>();
+    visibleReceipts.forEach((receipt) => {
+      const key = receipt.payment_method || "on_delivery";
+      const existing = groups.get(key) ?? [];
+      existing.push(receipt);
+      groups.set(key, existing);
+    });
+    return Array.from(groups.entries()).map(([key, items]) => ({
+      key,
+      title: getPaymentMethodLabel(key),
+      items,
+    }));
   }, [visibleReceipts]);
 
   return (
@@ -174,7 +181,7 @@ export default function PaymentsPage() {
                     <div className="text-xs text-gray-400">
                       {receipt.receipt_date}
                       {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
-                      {receipt.payment_method ? ` • ${receipt.payment_method}` : ""}
+                      {receipt.payment_method ? ` • ${getPaymentMethodLabel(receipt.payment_method)}` : ""}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 truncate">
                       {receipt.items.map((item) => item.name).join("、")}
@@ -194,9 +201,9 @@ export default function PaymentsPage() {
                       {pendingPaymentIds.includes(receipt.id) ? (
                         <span className="inline-flex items-center"><Loader2 size={12} className="mr-1 animate-spin" />處理中</span>
                       ) : receipt.payment_status === "paid" ? (
-                        <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />已付款</span>
+                        <span className="inline-flex items-center"><CheckCircle2 size={12} className="mr-1" />{getPaymentStatusLabel(receipt.payment_status)}</span>
                       ) : (
-                        <span className="inline-flex items-center"><Circle size={12} className="mr-1" />未付款</span>
+                        <span className="inline-flex items-center"><Circle size={12} className="mr-1" />{getPaymentStatusLabel(receipt.payment_status)}</span>
                       )}
                     </button>
                   </div>

@@ -5,10 +5,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell
 } from "recharts";
-import { Shield, Users, Receipt, Loader2, PlusCircle } from "lucide-react";
+import { Shield, Users, Receipt, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import { getShopUser } from "@/lib/auth";
+import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labels";
 import { supabase } from "@/lib/supabase";
 import {
   buildItemRows,
@@ -20,7 +21,7 @@ import {
   type DashboardFilter,
   type ReportReceipt,
 } from "@/lib/reporting";
-import { getUnitLabel, loadAllAccountStatuses, loadGlobalUnits, removeGlobalUnit, saveGlobalUnits, type AccountStatus } from "@/lib/account-settings";
+import { loadAllAccountStatuses, type AccountStatus } from "@/lib/account-settings";
 
 type AdminAccount = {
   id: string;
@@ -38,8 +39,8 @@ export default function AdminPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
   const [filter, setFilter] = useState<DashboardFilter>("all");
-  const [globalUnits, setGlobalUnits] = useState<string[]>([]);
-  const [newGlobalUnit, setNewGlobalUnit] = useState("");
+  const [itemPage, setItemPage] = useState(1);
+  const [receiptPage, setReceiptPage] = useState(1);
 
   useEffect(() => {
     if (user?.role !== "admin") {
@@ -75,10 +76,8 @@ export default function AdminPage() {
 
         const visibleAccounts = (accountRows ?? []).filter((account) => account.login_id !== "60000000");
         const statuses = await loadAllAccountStatuses(visibleAccounts.map((account) => account.id));
-        const sharedUnits = await loadGlobalUnits();
         setAccounts(visibleAccounts.map((account) => ({ ...account, status: statuses[account.id] || "active" })));
         setReceipts(normalizeReportReceipts(receiptRows));
-        setGlobalUnits(sharedUnits);
       } catch (error) {
         console.error(error);
       } finally {
@@ -116,45 +115,44 @@ export default function AdminPage() {
   );
   const trendSeries = useMemo(() => buildTrendSeries(filteredReceipts), [filteredReceipts]);
   const itemRows = useMemo(() => buildItemRows(filteredReceipts), [filteredReceipts]);
+  const itemTotalPages = Math.max(1, Math.ceil(itemRows.length / 10));
+  const receiptTotalPages = Math.max(1, Math.ceil(filteredReceipts.length / 10));
+  const effectiveItemPage = Math.min(itemPage, itemTotalPages);
+  const effectiveReceiptPage = Math.min(receiptPage, receiptTotalPages);
+  const paginatedItemRows = useMemo(
+    () => itemRows.slice((effectiveItemPage - 1) * 10, effectiveItemPage * 10),
+    [effectiveItemPage, itemRows]
+  );
+  const paginatedReceipts = useMemo(
+    () => filteredReceipts.slice((effectiveReceiptPage - 1) * 10, effectiveReceiptPage * 10),
+    [effectiveReceiptPage, filteredReceipts]
+  );
   const accountNameById = useMemo(
     () => Object.fromEntries(accounts.map((account) => [account.id, account.shop_name])) as Record<string, string>,
     [accounts]
   );
 
-  async function addGlobalUnit() {
-    const nextUnit = newGlobalUnit.trim();
-    if (!nextUnit) return;
-    const nextUnits = Array.from(new Set([...globalUnits, nextUnit]));
-    await saveGlobalUnits(nextUnits);
-    setGlobalUnits(nextUnits);
-    setNewGlobalUnit("");
-  }
-
-  async function deleteGlobalUnit(unit: string) {
-    await removeGlobalUnit(unit);
-    const { data: receiptsToUpdate, error } = await supabase
-      .from("receipts")
-      .select("id, raw_ocr_data");
-
-    if (error) throw error;
-
-    for (const receipt of receiptsToUpdate ?? []) {
-      const raw = typeof receipt.raw_ocr_data === "object" && receipt.raw_ocr_data !== null
-        ? receipt.raw_ocr_data as Record<string, unknown>
-        : {};
-      const itemMetadata = Array.isArray(raw.item_metadata) ? raw.item_metadata : [];
-      const nextMetadata = itemMetadata.map((item) => {
-        if (typeof item !== "object" || item === null) return item;
-        const metadata = item as Record<string, unknown>;
-        return metadata.quantity_unit === unit ? { ...metadata, quantity_unit: "unit" } : metadata;
-      });
-      await supabase
-        .from("receipts")
-        .update({ raw_ocr_data: { ...raw, item_metadata: nextMetadata } })
-        .eq("id", receipt.id);
-    }
-
-    setGlobalUnits((current) => current.filter((value) => value !== unit));
+  function renderPager(page: number, totalPages: number, setPage: (value: number) => void) {
+    if (totalPages <= 1) return null;
+    return (
+      <div className="flex items-center justify-center gap-3 pt-2">
+        <button
+          onClick={() => setPage(Math.max(1, page - 1))}
+          disabled={page === 1}
+          className="px-4 py-2 rounded-full border border-gray-200 text-sm font-bold disabled:opacity-40"
+        >
+          上一頁
+        </button>
+        <div className="text-sm font-bold text-gray-500">{page} / {totalPages}</div>
+        <button
+          onClick={() => setPage(Math.min(totalPages, page + 1))}
+          disabled={page === totalPages}
+          className="px-4 py-2 rounded-full border border-gray-200 text-sm font-bold disabled:opacity-40"
+        >
+          下一頁
+        </button>
+      </div>
+    );
   }
 
   if (user?.role !== "admin") {
@@ -246,42 +244,6 @@ export default function AdminPage() {
             </div>
           </section>
 
-          <section className="card space-y-4 p-4">
-            <h2 className="font-bold text-gray-700">共用單位管理</h2>
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-              <input
-                type="text"
-                value={newGlobalUnit}
-                onChange={(e) => setNewGlobalUnit(e.target.value)}
-                placeholder="新增共用單位，例如 箱"
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-              />
-              <button
-                onClick={() => void addGlobalUnit()}
-                className="rounded-xl bg-blue-600 text-white font-black px-4 py-3 inline-flex items-center justify-center"
-              >
-                <PlusCircle size={18} className="mr-2" /> 新增單位
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-gray-50 rounded-xl px-3 py-2 flex items-center justify-between">
-                <span className="font-bold text-sm">個</span>
-                <span className="text-[10px] text-gray-400 font-black">預設</span>
-              </div>
-              {globalUnits.map((unit) => (
-                <div key={unit} className="bg-gray-50 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                  <span className="font-bold text-sm">{getUnitLabel(unit)}</span>
-                  <button
-                    onClick={() => void deleteGlobalUnit(unit)}
-                    className="text-red-500 text-[10px] font-black"
-                  >
-                    刪除
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-
           <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="card space-y-4 p-4">
               <h2 className="font-bold text-gray-700">供應商支出佔比</h2>
@@ -342,9 +304,21 @@ export default function AdminPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-black text-gray-700">產品價格比較</h2>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <h2 className="text-lg font-black text-gray-700">產品價格比較</h2>
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+              >
+                <option value="all">全部店舖</option>
+                {accountSummaries.map((account) => (
+                  <option key={`item-${account.id}`} value={account.id}>{account.shop_name}</option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-3">
-              {itemRows.map((item) => (
+              {paginatedItemRows.map((item) => (
                 <div key={`${item.receipt_id}-${item.id}`} className="card p-4 flex items-start justify-between gap-4">
                   <div>
                     <div className="font-black">{item.name}</div>
@@ -369,18 +343,33 @@ export default function AdminPage() {
                 <div className="card py-10 text-center text-gray-400">目前沒有可比較的產品資料。</div>
               )}
             </div>
+            {renderPager(effectiveItemPage, itemTotalPages, setItemPage)}
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-black text-gray-700">收據記錄檢視</h2>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <h2 className="text-lg font-black text-gray-700">收據記錄檢視</h2>
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+              >
+                <option value="all">全部店舖</option>
+                {accountSummaries.map((account) => (
+                  <option key={`receipt-${account.id}`} value={account.id}>{account.shop_name}</option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-3">
-              {filteredReceipts.map((receipt) => (
-                <Link key={receipt.id} href={`/admin/receipts/${receipt.id}`} className="card p-4 flex items-start justify-between gap-4 hover:border-blue-200 transition-all">
+              {paginatedReceipts.map((receipt) => (
+                <Link key={receipt.id} href={`/admin/receipts/${receipt.id}`} target="_blank" rel="noreferrer" className="card p-4 flex items-start justify-between gap-4 hover:border-blue-200 transition-all">
                   <div className="min-w-0">
                     <div className="font-black">{receipt.merchant_name}</div>
                     <div className="text-xs text-gray-400">
                       {accountNameById[receipt.user_id] || "未知店主"} • {receipt.receipt_date}
                       {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
+                      {receipt.payment_method ? ` • ${getPaymentMethodLabel(receipt.payment_method)}` : ""}
+                      {receipt.payment_status ? ` • ${getPaymentStatusLabel(receipt.payment_status)}` : ""}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 truncate">
                       {receipt.items.map((item) => item.name).join("、")}
@@ -396,6 +385,7 @@ export default function AdminPage() {
                 <div className="card py-10 text-center text-gray-400">目前沒有可檢視的收據。</div>
               )}
             </div>
+            {renderPager(effectiveReceiptPage, receiptTotalPages, setReceiptPage)}
           </section>
         </>
       )}

@@ -8,7 +8,10 @@ import { supabase } from "@/lib/supabase";
 import {
   deleteSupplierPreset,
   getUnitLabel,
+  loadGlobalUnits,
   loadShopPresets,
+  removeGlobalUnit,
+  saveGlobalUnits,
   saveSupplierPreset,
   type ShopPresets,
 } from "@/lib/account-settings";
@@ -24,12 +27,19 @@ export default function SettingsPage() {
   const [productName, setProductName] = useState("");
   const [defaultUnit, setDefaultUnit] = useState("kg");
   const [actualProductsBySupplier, setActualProductsBySupplier] = useState<Record<string, string[]>>({});
+  const [newCustomUnit, setNewCustomUnit] = useState("");
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
 
   useEffect(() => {
     if (!user?.id || user.role === "admin") {
+      if (user?.role === "admin") {
+        void (async () => {
+          const globalUnits = await loadGlobalUnits();
+          setPresets((current) => ({ ...current, customUnits: globalUnits }));
+        })();
+      }
       return;
     }
 
@@ -148,6 +158,47 @@ export default function SettingsPage() {
       setSelectedSupplier(nextPresets.suppliers[0]?.name || "");
     }
     setStatus("供應商預設已刪除");
+  }
+
+  async function addGlobalUnit() {
+    if (user?.role !== "admin") return;
+    const unit = newCustomUnit.trim();
+    if (!unit) return;
+    const nextUnits = Array.from(new Set([...presets.customUnits, unit]));
+    await saveGlobalUnits(nextUnits);
+    setPresets((current) => ({ ...current, customUnits: nextUnits }));
+    setNewCustomUnit("");
+    setStatus("共用單位已更新");
+  }
+
+  async function deleteGlobalUnit(unit: string) {
+    if (user?.role !== "admin") return;
+    await removeGlobalUnit(unit);
+    const { data: receipts, error } = await supabase
+      .from("receipts")
+      .select("id, raw_ocr_data");
+
+    if (error) throw error;
+
+    for (const receipt of receipts ?? []) {
+      const raw = typeof receipt.raw_ocr_data === "object" && receipt.raw_ocr_data !== null
+        ? receipt.raw_ocr_data as Record<string, unknown>
+        : {};
+      const itemMetadata = Array.isArray(raw.item_metadata) ? raw.item_metadata : [];
+      const nextMetadata = itemMetadata.map((item) => {
+        if (typeof item !== "object" || item === null) return item;
+        const metadata = item as Record<string, unknown>;
+        return metadata.quantity_unit === unit ? { ...metadata, quantity_unit: "unit" } : metadata;
+      });
+
+      await supabase
+        .from("receipts")
+        .update({ raw_ocr_data: { ...raw, item_metadata: nextMetadata } })
+        .eq("id", receipt.id);
+    }
+
+    setPresets((current) => ({ ...current, customUnits: current.customUnits.filter((value) => value !== unit) }));
+    setStatus("共用單位已刪除");
   }
 
   async function handleChangePassword() {
@@ -501,8 +552,27 @@ export default function SettingsPage() {
             共用單位
           </h2>
           <div className="text-sm text-gray-400">
-            單位現在由管理員在後台統一維護，所有店主共用同一套單位。
+            {user.role === "admin"
+              ? "您可以在這裡維護全店共用的單位。"
+              : "單位現在由管理員統一維護，所有店主共用同一套單位。"}
           </div>
+          {user.role === "admin" && (
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+              <input
+                type="text"
+                value={newCustomUnit}
+                onChange={(e) => setNewCustomUnit(e.target.value)}
+                placeholder="新增共用單位，例如 箱"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
+              />
+              <button
+                onClick={() => void addGlobalUnit()}
+                className="rounded-xl bg-blue-600 text-white font-black px-4 py-3 inline-flex items-center justify-center"
+              >
+                <PlusCircle size={18} className="mr-2" /> 新增單位
+              </button>
+            </div>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
               <div className="font-bold text-sm">個</div>
@@ -511,7 +581,16 @@ export default function SettingsPage() {
             {presets.customUnits.map((unit) => (
               <div key={unit} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
                 <div className="font-bold text-sm">{getUnitLabel(unit)}</div>
-                <div className="text-[10px] text-gray-400 font-black">共用</div>
+                {user.role === "admin" ? (
+                  <button
+                    onClick={() => void deleteGlobalUnit(unit)}
+                    className="text-red-500 text-[10px] font-black"
+                  >
+                    刪除
+                  </button>
+                ) : (
+                  <div className="text-[10px] text-gray-400 font-black">共用</div>
+                )}
               </div>
             ))}
           </div>

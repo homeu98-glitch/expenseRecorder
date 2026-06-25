@@ -14,6 +14,7 @@ import { clsx } from "clsx";
 import { useSearchParams } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
 import { downloadCsv } from "@/lib/csv";
+import { getPaymentStatusLabel } from "@/lib/payment-labels";
 import { supabase } from "@/lib/supabase";
 import {
   buildItemRows,
@@ -138,7 +139,7 @@ export default function ReportsPage() {
                   數量: 0,
                   單價: 0,
                   總額: receipt.total_amount,
-                  付款狀態: receipt.payment_status,
+                  付款狀態: getPaymentStatusLabel(receipt.payment_status),
                 }];
               }
               return receipt.items.map((item) => ({
@@ -149,7 +150,7 @@ export default function ReportsPage() {
                 數量: item.quantity,
                 單價: item.unit_price,
                 總額: receipt.total_amount,
-                付款狀態: receipt.payment_status,
+                付款狀態: getPaymentStatusLabel(receipt.payment_status),
               }));
             });
     downloadCsv(`reports-${view}.csv`, rows);
