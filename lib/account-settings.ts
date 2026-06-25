@@ -1,5 +1,3 @@
-"use client";
-
 import { supabase } from "@/lib/supabase";
 
 export type ProductPreset = {
@@ -27,8 +25,10 @@ export type ShopAccountSettings = {
 };
 
 const SETTINGS_MERCHANT_PREFIX = "__shop_settings__:";
+const GLOBAL_SETTINGS_MERCHANT_NAME = "__global_settings__";
 const PRESET_PREFIX = "__preset_json__:";
 const SETTINGS_PREFIX = "__settings_json__:";
+const GLOBAL_UNITS_PREFIX = "__global_units__:";
 
 function encodePayload(prefix: string, payload: unknown) {
   return `${prefix}${JSON.stringify(payload)}`;
@@ -57,6 +57,10 @@ function getDefaultAccountSettings(): ShopAccountSettings {
   };
 }
 
+function getDefaultGlobalUnits() {
+  return ["kg", "lb", "斤", "箱", "包", "袋", "瓶", "罐", "支", "條", "隻", "片", "打"];
+}
+
 function normalizeAccountStatus(value: unknown): AccountStatus {
   return value === "suspended" || value === "deleted" ? value : "active";
 }
@@ -75,6 +79,113 @@ export function getUnitLabel(unit: string) {
   if (unit === "kg") return "KG";
   if (unit === "lb") return "Pound";
   return unit;
+}
+
+async function ensureAdminUserId() {
+  const { data: existingAdmin, error: existingError } = await supabase
+    .from("shop_users")
+    .select("id")
+    .eq("login_id", "60000000")
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  if (existingAdmin?.id) {
+    return existingAdmin.id;
+  }
+
+  const { data: createdAdmin, error: createError } = await supabase
+    .from("shop_users")
+    .insert({ shop_name: "系統管理員", login_id: "60000000", login_pin: "0000" })
+    .select("id")
+    .single();
+
+  if (createError) {
+    throw createError;
+  }
+
+  return createdAdmin.id;
+}
+
+async function ensureGlobalUnitStore() {
+  const adminUserId = await ensureAdminUserId();
+  const { data: existing, error: fetchError } = await supabase
+    .from("merchants")
+    .select("address")
+    .eq("user_id", adminUserId)
+    .eq("name", GLOBAL_SETTINGS_MERCHANT_NAME)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  const defaultUnits = getDefaultGlobalUnits();
+  const existingUnits = decodePayload<{ units?: string[] }>(GLOBAL_UNITS_PREFIX, existing?.address)?.units;
+  if (Array.isArray(existingUnits) && existingUnits.length > 0) {
+    return { adminUserId, units: existingUnits };
+  }
+
+  const { error: upsertError } = await supabase
+    .from("merchants")
+    .upsert(
+      {
+        user_id: adminUserId,
+        name: GLOBAL_SETTINGS_MERCHANT_NAME,
+        address: encodePayload(GLOBAL_UNITS_PREFIX, { units: defaultUnits }),
+      },
+      { onConflict: "user_id,name" }
+    );
+
+  if (upsertError) {
+    throw upsertError;
+  }
+
+  return { adminUserId, units: defaultUnits };
+}
+
+export async function loadGlobalUnits() {
+  const { units } = await ensureGlobalUnitStore();
+  return Array.from(
+    new Set(
+      units
+        .map((unit) => normalizeUnitValue(unit))
+        .filter((unit) => unit !== "unit")
+    )
+  );
+}
+
+export async function saveGlobalUnits(units: string[]) {
+  const { adminUserId } = await ensureGlobalUnitStore();
+  const normalized = Array.from(
+    new Set(
+      units
+        .map((unit) => normalizeUnitValue(unit))
+        .filter((unit) => unit !== "unit")
+    )
+  );
+
+  const { error } = await supabase
+    .from("merchants")
+    .upsert(
+      {
+        user_id: adminUserId,
+        name: GLOBAL_SETTINGS_MERCHANT_NAME,
+        address: encodePayload(GLOBAL_UNITS_PREFIX, { units: normalized }),
+      },
+      { onConflict: "user_id,name" }
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function appendGlobalUnits(units: string[]) {
+  const current = await loadGlobalUnits();
+  await saveGlobalUnits([...current, ...units]);
 }
 
 export async function loadShopAccountSettings(userId: string): Promise<ShopAccountSettings> {
@@ -136,6 +247,7 @@ export async function loadShopPresets(userId: string): Promise<ShopPresets> {
   }
 
   const settings = getDefaultAccountSettings();
+  const globalUnits = await loadGlobalUnits();
   const suppliers: SupplierPreset[] = [];
   const hiddenSuppliers: string[] = [];
 
@@ -167,17 +279,13 @@ export async function loadShopPresets(userId: string): Promise<ShopPresets> {
 
   return {
     suppliers,
-    customUnits: Array.from(new Set(settings.customUnits)).filter(Boolean),
+    customUnits: Array.from(new Set(globalUnits)).filter(Boolean),
     hiddenSuppliers,
   };
 }
 
 export async function saveShopCustomUnits(userId: string, customUnits: string[]) {
-  const current = await loadShopAccountSettings(userId);
-  const normalized = Array.from(
-    new Set(customUnits.map((unit) => normalizeUnitValue(unit)).filter((unit) => unit !== "unit"))
-  );
-  await saveShopAccountSettings(userId, { ...current, customUnits: normalized });
+  await saveGlobalUnits(customUnits);
 }
 
 export async function saveShopAccountStatus(userId: string, accountStatus: AccountStatus) {
@@ -241,4 +349,9 @@ export async function deleteSupplierPreset(userId: string, supplierName: string)
   if (error) {
     throw error;
   }
+}
+
+export async function removeGlobalUnit(unitToDelete: string) {
+  const nextUnits = (await loadGlobalUnits()).filter((unit) => unit !== unitToDelete);
+  await saveGlobalUnits(nextUnits);
 }

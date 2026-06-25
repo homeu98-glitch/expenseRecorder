@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import ConfettiBurst from "@/components/ConfettiBurst";
@@ -10,12 +11,14 @@ import { playPaidSound } from "@/lib/feedback";
 import { normalizeReportReceipts, type ReportReceipt } from "@/lib/reporting";
 
 export default function PaymentsPage() {
+  const searchParams = useSearchParams();
   const [user] = useState<{ id: string; role?: string } | null>(() => getShopUser());
-  const [tab, setTab] = useState<"unpaid" | "paid">("unpaid");
+  const [manualTab, setManualTab] = useState<"unpaid" | "paid">("unpaid");
   const [loading, setLoading] = useState(() => Boolean(getShopUser()?.id));
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [pendingPaymentIds, setPendingPaymentIds] = useState<string[]>([]);
+  const tab = searchParams.get("tab") === "paid" ? "paid" : searchParams.get("tab") === "unpaid" ? "unpaid" : manualTab;
 
   async function loadReceipts(userId: string) {
     setLoading(true);
@@ -55,6 +58,17 @@ export default function PaymentsPage() {
   const visibleReceipts = useMemo(
     () => receipts.filter((receipt) => receipt.payment_status === tab),
     [receipts, tab]
+  );
+  const paymentTotals = useMemo(
+    () => ({
+      unpaid: receipts
+        .filter((receipt) => receipt.payment_status === "unpaid")
+        .reduce((sum, receipt) => sum + receipt.total_amount, 0),
+      paid: receipts
+        .filter((receipt) => receipt.payment_status === "paid")
+        .reduce((sum, receipt) => sum + receipt.total_amount, 0),
+    }),
+    [receipts]
   );
 
   async function toggleStatus(receipt: ReportReceipt) {
@@ -120,7 +134,7 @@ export default function PaymentsPage() {
         ] as const).map((option) => (
           <button
             key={option.id}
-            onClick={() => setTab(option.id)}
+            onClick={() => setManualTab(option.id)}
             className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
               tab === option.id ? "bg-white text-blue-600 shadow-sm" : "text-gray-500"
             }`}
@@ -128,6 +142,17 @@ export default function PaymentsPage() {
             {option.label}
           </button>
         ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4">
+          <div className="text-xs text-gray-400 font-black">未付款總額</div>
+          <div className="text-2xl font-black text-amber-600 mt-1">${paymentTotals.unpaid.toLocaleString()}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-xs text-gray-400 font-black">已付款總額</div>
+          <div className="text-2xl font-black text-green-600 mt-1">${paymentTotals.paid.toLocaleString()}</div>
+        </div>
       </div>
 
       {loading ? (

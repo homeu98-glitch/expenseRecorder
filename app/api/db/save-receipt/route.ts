@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
+import { appendGlobalUnits, normalizeUnitValue } from '@/lib/account-settings';
 
 type ReceiptItemInput = {
   name: string;
@@ -131,6 +132,13 @@ export async function POST(request: Request) {
       unit_price: item.unit_price,
       quantity: item.quantity || 1
     }));
+
+    const discoveredUnits = (Array.isArray(items) ? (items as ReceiptItemInput[]) : [])
+      .map((item) => normalizeUnitValue(item.quantity_unit))
+      .filter((unit) => unit !== "unit");
+    if (discoveredUnits.length > 0) {
+      await appendGlobalUnits(discoveredUnits);
+    }
 
     if (receiptItems.length > 0) {
       const { error: iError } = await supabase

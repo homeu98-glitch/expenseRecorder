@@ -38,6 +38,7 @@ export default function EditReceiptPage() {
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [allItemSuggestions, setAllItemSuggestions] = useState<string[]>([]);
   const [activeItemDropdownId, setActiveItemDropdownId] = useState<number | null>(null);
+  const [activeUnitDropdownId, setActiveUnitDropdownId] = useState<number | null>(null);
   const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
   const [productPresetMap, setProductPresetMap] = useState<Record<string, { product_type?: string; default_unit?: string }>>({});
   const [customUnits, setCustomUnits] = useState<string[]>(["kg", "lb"]);
@@ -69,6 +70,17 @@ export default function EditReceiptPage() {
       })
     ) as Record<number, string[]>;
   }, [allItemSuggestions, data.items, data.merchant_name, supplierItemMap]);
+  const unitSuggestionsById = useMemo(() => {
+    return Object.fromEntries(
+      data.items.map((item) => {
+        const query = (item.quantity_unit || "").trim().toLowerCase();
+        const matches = ["unit", ...customUnits].filter((unit) =>
+          !query ? true : getUnitLabel(unit).toLowerCase().includes(query) || unit.toLowerCase().includes(query)
+        );
+        return [item.id, matches.slice(0, 8)];
+      })
+    ) as Record<number, string[]>;
+  }, [customUnits, data.items]);
 
   useEffect(() => {
     if (data.image_data_url || !data.image_url) {
@@ -595,18 +607,38 @@ export default function EditReceiptPage() {
                       className="w-full sm:w-12 bg-transparent py-1 outline-none text-center font-bold"
                     />
                   </div>
-                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 min-w-0">
+                  <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 min-w-0 relative">
                     <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">單位</span>
-                    <select
-                      value={item.quantity_unit || "unit"}
-                      onChange={(e) => handleUpdateItem(item.id, 'quantity_unit', e.target.value)}
+                    <input
+                      type="text"
+                      value={item.quantity_unit ? getUnitLabel(item.quantity_unit) : ""}
+                      onFocus={() => setActiveUnitDropdownId(item.id)}
+                      onBlur={() => window.setTimeout(() => setActiveUnitDropdownId((current) => (current === item.id ? null : current)), 120)}
+                      onChange={(e) => {
+                        handleUpdateItem(item.id, 'quantity_unit', e.target.value || "unit");
+                        setActiveUnitDropdownId(item.id);
+                      }}
+                      placeholder="個"
                       className="w-full bg-transparent py-1 outline-none font-bold text-sm min-w-0"
-                    >
-                      <option value="unit">個</option>
-                      {customUnits.map((unit) => (
-                        <option key={unit} value={unit}>{getUnitLabel(unit)}</option>
-                      ))}
-                    </select>
+                    />
+                    {activeUnitDropdownId === item.id && (unitSuggestionsById[item.id]?.length || 0) > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl z-20 overflow-hidden">
+                        {(unitSuggestionsById[item.id] || []).map((unit) => (
+                          <button
+                            key={`${item.id}-${unit}`}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              handleUpdateItem(item.id, "quantity_unit", unit);
+                              setActiveUnitDropdownId(null);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-gray-50 last:border-b-0"
+                          >
+                            {getUnitLabel(unit)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 min-w-0">
                     <span className="text-[10px] font-black text-gray-400 mr-2 uppercase">單價</span>

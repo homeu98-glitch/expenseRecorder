@@ -90,6 +90,12 @@ export default function Home() {
   const stats = useMemo(() => ({
     count: filteredReceipts.length,
     total: filteredReceipts.reduce((sum, receipt) => sum + receipt.total_amount, 0),
+    unpaid: filteredReceipts
+      .filter((receipt) => receipt.payment_status === "unpaid")
+      .reduce((sum, receipt) => sum + receipt.total_amount, 0),
+    paid: filteredReceipts
+      .filter((receipt) => receipt.payment_status === "paid")
+      .reduce((sum, receipt) => sum + receipt.total_amount, 0),
     up: trendSummary.up,
     down: trendSummary.down,
   }), [filteredReceipts, trendSummary]);
@@ -214,6 +220,17 @@ export default function Home() {
           <span className="text-[10px] text-gray-400 font-bold mt-1">價格下降項</span>
         </Link>
       </div>
+
+      <section className="grid grid-cols-2 gap-4">
+        <Link href="/payments?tab=unpaid" className="card p-4 hover:border-amber-200 transition-all active:scale-95">
+          <div className="text-xs text-gray-400 font-black">未付款總額</div>
+          <div className="text-2xl font-black text-amber-600 mt-1">${loading ? "..." : stats.unpaid.toLocaleString()}</div>
+        </Link>
+        <Link href="/payments?tab=paid" className="card p-4 hover:border-green-200 transition-all active:scale-95">
+          <div className="text-xs text-gray-400 font-black">已付款總額</div>
+          <div className="text-2xl font-black text-green-600 mt-1">${loading ? "..." : stats.paid.toLocaleString()}</div>
+        </Link>
+      </section>
 
       {/* Search Input for Quick Check */}
       <div className="relative group">

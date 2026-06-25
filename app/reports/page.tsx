@@ -13,6 +13,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { useSearchParams } from "next/navigation";
 import { getShopUser } from "@/lib/auth";
+import { downloadCsv } from "@/lib/csv";
 import { supabase } from "@/lib/supabase";
 import {
   buildItemRows,
@@ -110,19 +111,48 @@ export default function ReportsPage() {
   }, [itemRows, itemQuery, initialType]);
 
   function handleExport() {
-    const payload =
+    const rows =
       view === 'items'
-        ? visibleItems
+        ? visibleItems.map((item) => ({
+            品項: item.name,
+            供應商: item.merchant_name,
+            日期: item.receipt_date,
+            單位: item.normalized_unit_label ?? item.quantity_unit,
+            單價: item.normalized_unit_price ?? item.unit_price,
+            變動百分比: item.change_percent == null ? "" : item.change_percent.toFixed(2),
+            收據編號: item.receipt_number || "",
+          }))
         : view === 'suppliers'
-          ? supplierData
-          : filteredReceipts;
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `reports-${view}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+          ? supplierData.map((supplier) => ({
+              供應商: supplier.name,
+              總支出: supplier.total,
+              收據數: supplier.count,
+            }))
+          : filteredReceipts.flatMap((receipt) => {
+              if (receipt.items.length === 0) {
+                return [{
+                  日期: receipt.receipt_date,
+                  供應商: receipt.merchant_name,
+                  收據編號: receipt.receipt_number || "",
+                  品項: "",
+                  數量: 0,
+                  單價: 0,
+                  總額: receipt.total_amount,
+                  付款狀態: receipt.payment_status,
+                }];
+              }
+              return receipt.items.map((item) => ({
+                日期: receipt.receipt_date,
+                供應商: receipt.merchant_name,
+                收據編號: receipt.receipt_number || "",
+                品項: item.name,
+                數量: item.quantity,
+                單價: item.unit_price,
+                總額: receipt.total_amount,
+                付款狀態: receipt.payment_status,
+              }));
+            });
+    downloadCsv(`reports-${view}.csv`, rows);
   }
 
   return (

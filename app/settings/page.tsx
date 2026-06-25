@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Shield, Database, Trash2, ArrowLeft, LogOut, Download, CheckCircle2, PlusCircle, Package, KeyRound, Ruler } from "lucide-react";
+import { Shield, Database, Trash2, ArrowLeft, LogOut, Download, CheckCircle2, PlusCircle, Package, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { getShopUser, logout } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
@@ -9,11 +9,10 @@ import {
   deleteSupplierPreset,
   getUnitLabel,
   loadShopPresets,
-  normalizeUnitValue,
-  saveShopCustomUnits,
   saveSupplierPreset,
   type ShopPresets,
 } from "@/lib/account-settings";
+import { downloadCsv } from "@/lib/csv";
 
 export default function SettingsPage() {
   const [user] = useState<{ id: string; shop_name: string; login_id: string; role?: string } | null>(() => getShopUser());
@@ -25,7 +24,6 @@ export default function SettingsPage() {
   const [productName, setProductName] = useState("");
   const [defaultUnit, setDefaultUnit] = useState("kg");
   const [actualProductsBySupplier, setActualProductsBySupplier] = useState<Record<string, string[]>>({});
-  const [newCustomUnit, setNewCustomUnit] = useState("");
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -152,56 +150,6 @@ export default function SettingsPage() {
     setStatus("供應商預設已刪除");
   }
 
-  async function addCustomUnit() {
-    if (!user?.id || user.role === "admin") return;
-    const normalized = normalizeUnitValue(newCustomUnit);
-    if (!normalized || normalized === "unit") return;
-    const nextPresets = {
-      ...presets,
-      customUnits: Array.from(new Set([...presets.customUnits, normalized])),
-    };
-    await saveShopCustomUnits(user.id, nextPresets.customUnits);
-    setPresets(nextPresets);
-    setStatus("自訂單位已儲存");
-    setNewCustomUnit("");
-  }
-
-  async function removeCustomUnit(unitToDelete: string) {
-    if (!user?.id || user.role === "admin") return;
-    const nextUnits = presets.customUnits.filter((unit) => unit !== unitToDelete);
-    await saveShopCustomUnits(user.id, nextUnits);
-
-    const { data: receipts, error } = await supabase
-      .from("receipts")
-      .select("id, raw_ocr_data")
-      .eq("user_id", user.id);
-
-    if (error) throw error;
-
-    for (const receipt of receipts ?? []) {
-      const raw = typeof receipt.raw_ocr_data === "object" && receipt.raw_ocr_data !== null
-        ? receipt.raw_ocr_data as Record<string, unknown>
-        : {};
-      const itemMetadata = Array.isArray(raw.item_metadata) ? raw.item_metadata : [];
-      const nextMetadata = itemMetadata.map((item) => {
-        if (typeof item !== "object" || item === null) return item;
-        const metadata = item as Record<string, unknown>;
-        return metadata.quantity_unit === unitToDelete
-          ? { ...metadata, quantity_unit: "unit" }
-          : metadata;
-      });
-
-      await supabase
-        .from("receipts")
-        .update({ raw_ocr_data: { ...raw, item_metadata: nextMetadata } })
-        .eq("id", receipt.id)
-        .eq("user_id", user.id);
-    }
-
-    setPresets({ ...presets, customUnits: nextUnits });
-    setStatus("單位已刪除，相關記錄已回退為 個");
-  }
-
   async function handleChangePassword() {
     if (!user) return;
     if (newPin.length !== 4 || confirmPin.length !== 4) {
@@ -285,12 +233,33 @@ export default function SettingsPage() {
       return;
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `expense_report_${user.shop_name}.json`;
-    a.click();
+    const csvRows = (data ?? []).flatMap((receipt) => {
+      const merchantRelation = receipt.merchants as { name?: string } | Array<{ name?: string }> | null;
+      const merchantName = Array.isArray(merchantRelation) ? merchantRelation[0]?.name : merchantRelation?.name;
+      const items = receipt.receipt_items ?? [];
+
+      if (items.length === 0) {
+        return [{
+          日期: receipt.receipt_date,
+          供應商: merchantName || "",
+          品項: "",
+          數量: "",
+          單價: "",
+          收據總額: receipt.total_amount,
+        }];
+      }
+
+      return items.map((item: { name?: string; quantity?: number; unit_price?: number }) => ({
+        日期: receipt.receipt_date,
+        供應商: merchantName || "",
+        品項: item.name || "",
+        數量: item.quantity ?? "",
+        單價: item.unit_price ?? "",
+        收據總額: receipt.total_amount,
+      }));
+    });
+
+    downloadCsv(`expense_report_${user.shop_name}.csv`, csvRows);
     setStatus("匯出完成！");
   };
 
@@ -381,7 +350,7 @@ export default function SettingsPage() {
             <div className="flex items-center space-x-3 text-left">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Download size={20} /></div>
               <div>
-                <div className="font-bold text-gray-700 text-sm">匯出數據 (JSON)</div>
+                <div className="font-bold text-gray-700 text-sm">匯出數據 (CSV)</div>
                 <div className="text-[10px] text-gray-400 font-medium">備份您的所有開支記錄</div>
               </div>
             </div>
@@ -529,46 +498,23 @@ export default function SettingsPage() {
 
         <section className="card space-y-5">
           <h2 className="text-sm font-bold text-gray-400 uppercase flex items-center">
-            <Ruler size={16} className="mr-2" /> 自訂單位
+            共用單位
           </h2>
-          {user.role === "admin" ? (
-            <div className="text-sm text-gray-400">管理員賬戶不使用採購單位設定。</div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-                <input
-                  type="text"
-                  value={newCustomUnit}
-                  onChange={(e) => setNewCustomUnit(e.target.value)}
-                  placeholder="新增單位，例如 箱 或 pack"
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-                />
-                <button
-                  onClick={addCustomUnit}
-                  className="rounded-xl bg-blue-600 text-white font-black px-4 py-3 inline-flex items-center justify-center"
-                >
-                  <PlusCircle size={18} className="mr-2" /> 新增單位
-                </button>
+          <div className="text-sm text-gray-400">
+            單位現在由管理員在後台統一維護，所有店主共用同一套單位。
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+              <div className="font-bold text-sm">個</div>
+              <div className="text-xs text-gray-400 font-black">系統預設</div>
+            </div>
+            {presets.customUnits.map((unit) => (
+              <div key={unit} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                <div className="font-bold text-sm">{getUnitLabel(unit)}</div>
+                <div className="text-[10px] text-gray-400 font-black">共用</div>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-                  <div className="font-bold text-sm">個</div>
-                  <div className="text-xs text-gray-400 font-black">預設</div>
-                </div>
-                {presets.customUnits.map((unit) => (
-                  <div key={unit} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-                    <div className="font-bold text-sm">{getUnitLabel(unit)}</div>
-                    <button
-                      onClick={() => void removeCustomUnit(unit)}
-                      className="text-red-500 text-xs font-black"
-                    >
-                      刪除
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+            ))}
+          </div>
         </section>
 
         <section className="card space-y-5">
