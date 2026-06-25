@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { Home, PlusCircle, BarChart2, Settings, Wallet, Shield, Users } from "lucide-react";
+import { Home, PlusCircle, BarChart2, Settings, Wallet, Shield, Users, Receipt } from "lucide-react";
 import { clsx } from "clsx";
 import { getShopUser } from "@/lib/auth";
 
@@ -18,6 +18,7 @@ const defaultNavItems = [
 const adminNavItems = [
   { href: "/admin", label: "後台", icon: Shield },
   { href: "/admin/accounts", label: "賬戶", icon: Users },
+  { href: "/admin/receipts", label: "單據", icon: Receipt },
   { href: "/settings", label: "設定", icon: Settings },
 ];
 

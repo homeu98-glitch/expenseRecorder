@@ -152,6 +152,13 @@ export default function Home() {
           </Link>
         </div>
 
+        <div className="card p-4 border-amber-200 bg-amber-50/70">
+          <div className="text-sm font-black text-amber-700">提示</div>
+          <div className="text-xs text-amber-700 mt-1">
+            單據資料與圖片目前只保留 90 天，請在期限內完成檢查、匯出或備份。
+          </div>
+        </div>
+
         {/* Time Range Selector */}
         <div className="flex space-x-2 overflow-x-auto pb-1 no-scrollbar">
           {timeFilters.map((t) => (

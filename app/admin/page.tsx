@@ -7,11 +7,10 @@ import {
 } from "recharts";
 import { Shield, Users, Receipt, Loader2 } from "lucide-react";
 import { clsx } from "clsx";
+import Link from "next/link";
 import { getShopUser } from "@/lib/auth";
-import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labels";
 import { getInputMethodLabel } from "@/lib/input-method-labels";
 import { supabase } from "@/lib/supabase";
-import { AdminReceiptInspector } from "@/components/AdminReceiptInspector";
 import {
   buildItemRows,
   buildMonthlyExpenses,
@@ -41,9 +40,6 @@ export default function AdminPage() {
   const [receipts, setReceipts] = useState<ReportReceipt[]>([]);
   const [filter, setFilter] = useState<DashboardFilter>("all");
   const [itemPage, setItemPage] = useState(1);
-  const [receiptPage, setReceiptPage] = useState(1);
-  const [openReceiptTabs, setOpenReceiptTabs] = useState<Array<{ id: string; label: string }>>([]);
-  const [activeReceiptTabId, setActiveReceiptTabId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.role !== "admin") {
@@ -119,20 +115,10 @@ export default function AdminPage() {
   const trendSeries = useMemo(() => buildTrendSeries(filteredReceipts), [filteredReceipts]);
   const itemRows = useMemo(() => buildItemRows(filteredReceipts), [filteredReceipts]);
   const itemTotalPages = Math.max(1, Math.ceil(itemRows.length / 10));
-  const receiptTotalPages = Math.max(1, Math.ceil(filteredReceipts.length / 10));
   const effectiveItemPage = Math.min(itemPage, itemTotalPages);
-  const effectiveReceiptPage = Math.min(receiptPage, receiptTotalPages);
   const paginatedItemRows = useMemo(
     () => itemRows.slice((effectiveItemPage - 1) * 10, effectiveItemPage * 10),
     [effectiveItemPage, itemRows]
-  );
-  const paginatedReceipts = useMemo(
-    () => filteredReceipts.slice((effectiveReceiptPage - 1) * 10, effectiveReceiptPage * 10),
-    [effectiveReceiptPage, filteredReceipts]
-  );
-  const accountNameById = useMemo(
-    () => Object.fromEntries(accounts.map((account) => [account.id, account.shop_name])) as Record<string, string>,
-    [accounts]
   );
   const inputMethodStats = useMemo(() => {
     const counts = new Map<string, number>();
@@ -170,32 +156,6 @@ export default function AdminPage() {
     );
   }
 
-  function openReceiptTab(receipt: ReportReceipt) {
-    setOpenReceiptTabs((current) => {
-      if (current.some((tab) => tab.id === receipt.id)) {
-        return current;
-      }
-      return [
-        ...current,
-        {
-          id: receipt.id,
-          label: `${receipt.merchant_name}${receipt.receipt_number ? ` #${receipt.receipt_number}` : ""}`,
-        },
-      ];
-    });
-    setActiveReceiptTabId(receipt.id);
-  }
-
-  function closeReceiptTab(receiptId: string) {
-    setOpenReceiptTabs((current) => {
-      const next = current.filter((tab) => tab.id !== receiptId);
-      if (activeReceiptTabId === receiptId) {
-        setActiveReceiptTabId(next[next.length - 1]?.id || null);
-      }
-      return next;
-    });
-  }
-
   if (user?.role !== "admin") {
     return null;
   }
@@ -222,16 +182,16 @@ export default function AdminPage() {
               <div className="flex items-center text-blue-600 mb-2"><Users size={18} className="mr-2" /> 賬戶數</div>
               <div className="text-2xl font-black">{accountSummaries.length}</div>
             </div>
-            <div className="card p-5">
+            <Link href="/admin/receipts" className="card p-5 block hover:border-blue-200 transition-all">
               <div className="flex items-center text-green-600 mb-2"><Receipt size={18} className="mr-2" /> 收據數</div>
               <div className="text-2xl font-black">{receipts.length}</div>
-            </div>
+            </Link>
             <div className="card p-5">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-gray-500 text-sm font-bold">查看指定賬戶</div>
-                <a href="/admin/accounts" className="text-xs font-black text-blue-600">
+                <Link href="/admin/accounts" className="text-xs font-black text-blue-600">
                   賬戶管理
-                </a>
+                </Link>
               </div>
               <select
                 value={selectedAccountId}
@@ -403,85 +363,6 @@ export default function AdminPage() {
             {renderPager(effectiveItemPage, itemTotalPages, setItemPage)}
           </section>
 
-          <section className="space-y-3">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <h2 className="text-lg font-black text-gray-700">收據記錄檢視</h2>
-              <select
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold"
-              >
-                <option value="all">全部店舖</option>
-                {accountSummaries.map((account) => (
-                  <option key={`receipt-${account.id}`} value={account.id}>{account.shop_name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-3">
-              {paginatedReceipts.map((receipt) => (
-                <button
-                  key={receipt.id}
-                  type="button"
-                  onClick={() => openReceiptTab(receipt)}
-                  className="card p-4 flex items-start justify-between gap-4 hover:border-blue-200 transition-all w-full text-left"
-                >
-                  <div className="min-w-0">
-                    <div className="font-black">{receipt.merchant_name}</div>
-                    <div className="text-xs text-gray-400">
-                      {accountNameById[receipt.user_id] || "未知店主"} • {receipt.receipt_date}
-                      {receipt.receipt_number ? ` • #${receipt.receipt_number}` : ""}
-                      {receipt.payment_method ? ` • ${getPaymentMethodLabel(receipt.payment_method)}` : ""}
-                      {receipt.payment_status ? ` • ${getPaymentStatusLabel(receipt.payment_status)}` : ""}
-                    </div>
-                    <div className="text-xs text-blue-600 font-black mt-1">
-                      {getInputMethodLabel(receipt.input_method)}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 truncate">
-                      {receipt.items.map((item) => item.name).join("、")}
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="font-black text-lg">${receipt.total_amount.toLocaleString()}</div>
-                    <div className="text-[10px] text-blue-600 font-black mt-1">查看明細</div>
-                  </div>
-                </button>
-              ))}
-              {filteredReceipts.length === 0 && (
-                <div className="card py-10 text-center text-gray-400">目前沒有可檢視的收據。</div>
-              )}
-            </div>
-            {renderPager(effectiveReceiptPage, receiptTotalPages, setReceiptPage)}
-          </section>
-
-          {openReceiptTabs.length > 0 && activeReceiptTabId && (
-            <section className="space-y-3">
-              <h2 className="text-lg font-black text-gray-700">收據檢視分頁</h2>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {openReceiptTabs.map((tab) => (
-                  <div key={tab.id} className={clsx(
-                    "flex items-center gap-2 rounded-full border px-4 py-2 whitespace-nowrap",
-                    activeReceiptTabId === tab.id ? "border-blue-500 bg-blue-50 text-blue-600" : "border-gray-200 bg-white text-gray-500"
-                  )}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveReceiptTabId(tab.id)}
-                      className="text-sm font-black"
-                    >
-                      {tab.label}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => closeReceiptTab(tab.id)}
-                      className="text-xs font-black"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <AdminReceiptInspector receiptId={activeReceiptTabId} />
-            </section>
-          )}
         </>
       )}
     </div>
