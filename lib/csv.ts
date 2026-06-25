@@ -21,12 +21,12 @@ export function toCsv(rows: Array<Record<string, unknown>>) {
 
   const headerRow = headers.map(escapeCsvValue).join(",");
   const bodyRows = rows.map((row) => headers.map((header) => escapeCsvValue(row[header])).join(","));
-  return [headerRow, ...bodyRows].join("\n");
+  return [headerRow, ...bodyRows].join("\r\n");
 }
 
 export function downloadCsv(filename: string, rows: Array<Record<string, unknown>>) {
   const csv = toCsv(rows);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
