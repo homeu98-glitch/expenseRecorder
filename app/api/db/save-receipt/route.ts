@@ -90,7 +90,6 @@ export async function POST(request: Request) {
         payment_method: payment_method || "on_delivery",
         payment_status: payment_status || "unpaid",
         input_method: input_method || "unknown",
-        image_data_url: typeof image_data_url === "string" ? image_data_url : null,
         item_metadata: (Array.isArray(items) ? (items as ReceiptItemInput[]) : []).map((item) => ({
           name: item.name,
           quantity_unit: item.quantity_unit || "unit",

@@ -45,7 +45,6 @@ export default function AdminReceiptsPage() {
               total_amount,
               receipt_date,
               created_at,
-              image_url,
               raw_ocr_data,
               merchants(name),
               receipt_items(id, name, quantity, unit_price, total_price, created_at)
