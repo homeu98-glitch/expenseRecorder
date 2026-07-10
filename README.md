@@ -59,6 +59,7 @@ https://<expense-recorder-domain>/sso?ssoToken=<JWT>
 - `docs/SSO_INTEGRATION.md`
 - `docs/SSO_JWT_SPEC.md`
 - `docs/SSO_FLOW.md`
+- `docs/MACAU_LEDGER_ISSUER_SUPABASE.md`（macau-ledger 端 Supabase Auth issuer 範例）
 
 ## Database schema
 
