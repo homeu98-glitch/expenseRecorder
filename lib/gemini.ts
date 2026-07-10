@@ -92,9 +92,10 @@ export async function processReceiptImage(base64Image: string, mimeType: string)
       const text = result.response.text();
       console.log(`Success with model: ${modelName}`);
       return JSON.parse(text);
-    } catch (err: any) {
-      console.warn(`Model ${modelName} failed:`, err.message);
-      lastError = err;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.warn(`Model ${modelName} failed:`, message);
+      lastError = err instanceof Error ? err : new Error(message);
       // If it's a 404, we continue to the next model
       continue;
     }

@@ -13,8 +13,9 @@ export async function POST(request: Request) {
     const result = await processReceiptWithQwen(image, mimeType || 'image/jpeg');
 
     return NextResponse.json(result);
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "AI OCR Error";
     console.error("AI OCR Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
