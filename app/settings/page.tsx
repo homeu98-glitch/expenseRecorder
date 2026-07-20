@@ -646,7 +646,7 @@ export default function SettingsPage() {
 
         <div className="text-center pt-8">
           <div className="text-xs text-gray-400 font-bold">開支記錄助手 v1.0.0</div>
-          <div className="text-[10px] text-gray-300 mt-1 uppercase tracking-widest font-black">Powered by Gemini AI</div>
+          <div className="text-[10px] text-gray-300 mt-1 uppercase tracking-widest font-black">Powered by Multi-Model OCR</div>
         </div>
       </div>
     </div>

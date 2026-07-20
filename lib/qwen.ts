@@ -1,31 +1,54 @@
 import OpenAI from "openai";
 import { normalizeReceiptDraft } from "@/lib/receipt";
 
-const ALIBABA_API_KEY = "sk-ws-H.IXDYIY.AsyA.MEYCIQDkZTgllWaNkLyces_ArV7RlWeQnngAOKsj8VX2vyDUHgIhAKTVwFR61fOt16D9b8BZYVKSSrwTaLzWPIqZesmbS54l";
-const ALIBABA_BASE_URL = "https://ws-vf1nz0yy8t6dp30m.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1";
+const getQwenClient = () => {
+  const apiKey = process.env.ALIBABA_API_KEY || process.env.QWEN_API_KEY;
+  const baseURL =
+    process.env.ALIBABA_BASE_URL ||
+    process.env.QWEN_BASE_URL ||
+    "https://ws-vf1nz0yy8t6dp30m.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1";
 
-const openai = new OpenAI({
-  apiKey: ALIBABA_API_KEY,
-  baseURL: ALIBABA_BASE_URL,
-});
+  if (!apiKey) {
+    throw new Error("Qwen API key 未設定");
+  }
 
-export async function processReceiptWithQwen(base64Image: string, mimeType: string) {
+  return new OpenAI({
+    apiKey,
+    baseURL,
+  });
+};
+
+function getQwenConfig(mode: string) {
+  if (mode === "strong") {
+    return {
+      model: process.env.QWEN_STRONG_MODEL || "qwen-vl-plus",
+      prompt: `你是繁體中文收據 OCR。只輸出 JSON。
+1. 提取 merchant_name、receipt_number、date、total_amount、items。
+2. 日期輸出 YYYY-MM-DD，必要時把民國年轉西元。
+3. items 只保留真正交易品項；每項包含 name、quantity、unit_price。
+4. 若有彙總區，優先使用彙總區。
+5. 不要輸出 markdown，不要額外說明。`,
+      maxCompletionTokens: Number(process.env.QWEN_STRONG_MAX_TOKENS || "1200"),
+    };
+  }
+
+  return {
+    model: process.env.QWEN_CHEAP_MODEL || "qwen-vl-plus",
+    prompt: `你是繁體中文收據 OCR。請用最精簡方式輸出 JSON，只包含 merchant_name、date、total_amount、items、receipt_number。items 每項只保留 name、quantity、unit_price。不要 markdown，不要解釋。`,
+    maxCompletionTokens: Number(process.env.QWEN_CHEAP_MAX_TOKENS || "600"),
+  };
+}
+
+export async function processReceiptWithQwen(base64Image: string, mimeType: string, mode = "cheap") {
   try {
+    const openai = getQwenClient();
+    const config = getQwenConfig(mode);
     const response = await openai.chat.completions.create({
-      model: "qwen-vl-plus",
+      model: config.model,
       messages: [
         {
           role: "system",
-          content: `你是一個專業的繁體中文收據 OCR 系統。
-          請仔細分析收據圖片，特別是針對复杂的對賬單或月結單：
-          1. 提取商店名稱 (merchant_name)。
-          2. 如果收據上有單據編號、發票號碼、收據號碼或參考編號，請提取為 receipt_number。
-          3. 提取收據日期 (date)，格式為 YYYY-MM-DD。如果是 26/05/26 這種格式，請理解為 DD/MM/YY 並轉換為西元 2026-05-26。
-          4. 提取總金額 (total_amount)。請找尋「合計金額」或「實付總額」。
-          5. 提取品項列表 (items)。
-             - 對於有「彙總」或「統計」區域的收據，請優先提取該區域的彙總品項。
-             - 每個品項必須包含：名稱 (name)、數量 (quantity) 和單價 (unit_price)。
-          6. 必須僅輸出純 JSON 格式，不要包含任何 Markdown 標籤或額外文字。`
+          content: config.prompt
         },
         {
           role: "user",
@@ -43,7 +66,9 @@ export async function processReceiptWithQwen(base64Image: string, mimeType: stri
           ]
         }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      max_completion_tokens: config.maxCompletionTokens,
+      temperature: 0,
     });
 
     const content = response.choices[0]?.message?.content;

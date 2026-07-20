@@ -1,15 +1,13 @@
 import { GoogleGenerativeAI, SchemaType, ResponseSchema } from "@google/generative-ai";
+import { normalizeReceiptDraft } from "@/lib/receipt";
 
-// Use a SERVER-SIDE ONLY key name to prevent GitHub push blocks and ensure security
-const getApiKey = () => {
+function getGenAI() {
   const key = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!key) {
     throw new Error("GEMINI_API_KEY is not defined in environment variables");
   }
-  return key;
-};
-
-const genAI = new GoogleGenerativeAI(getApiKey());
+  return new GoogleGenerativeAI(key);
+}
 
 const schema: ResponseSchema = {
   description: "Extract receipt details",
@@ -50,57 +48,49 @@ const schema: ResponseSchema = {
   required: ["merchant_name", "total_amount", "date", "items"],
 };
 
-export async function processReceiptImage(base64Image: string, mimeType: string) {
-  // List of models to try in order of efficiency and likelihood of support
-  const modelsToTry = [
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro",
-    "gemini-1.5-pro-latest",
-    "gemini-pro-vision"
-  ];
-
-  let lastError = null;
-
-  for (const modelName of modelsToTry) {
-    try {
-      console.log(`Attempting AI OCR with model: ${modelName}`);
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: schema,
-        },
-      });
-
-      const prompt = `你是一個專業的繁體中文收據 OCR 系統。請從這張圖片中提取交易詳情。
-      - 商店名稱請使用繁體中文。
-      - 日期請轉換為 YYYY-MM-DD 格式（如果是民國日期如 113/05/06，請轉換為 2024-05-06）。
-      - 如果品項名稱不完整，請根據上下文提供最可能的完整名稱。
-      - 輸出為指定的 JSON 格式。`;
-
-      const result = await model.generateContent([
-        {
-          inlineData: {
-            data: base64Image,
-            mimeType: mimeType,
-          },
-        },
-        { text: prompt },
-      ]);
-
-      const text = result.response.text();
-      console.log(`Success with model: ${modelName}`);
-      return JSON.parse(text);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      console.warn(`Model ${modelName} failed:`, message);
-      lastError = err instanceof Error ? err : new Error(message);
-      // If it's a 404, we continue to the next model
-      continue;
-    }
+function getGeminiConfig(mode: string) {
+  if (mode === "strong") {
+    return {
+      model: process.env.GEMINI_STRONG_MODEL || "gemini-1.5-pro",
+      prompt: `你是繁體中文收據 OCR。請完整提取 merchant_name、receipt_number、date、total_amount、items。必要時補全不完整品項名稱。只輸出 JSON。`,
+    };
   }
 
-  // If all models fail, throw the last error
-  throw new Error(`All Gemini models failed. Last error: ${lastError?.message || 'Unknown error'}`);
+  return {
+    model: process.env.GEMINI_CHEAP_MODEL || "gemini-1.5-flash",
+    prompt: `你是繁體中文收據 OCR。請用精簡方式輸出 JSON，只保留 merchant_name、receipt_number、date、total_amount、items。不要額外說明。`,
+  };
+}
+
+export async function processReceiptWithGemini(base64Image: string, mimeType: string, mode = "flash") {
+  try {
+    const genAI = getGenAI();
+    const config = getGeminiConfig(mode);
+    const model = genAI.getGenerativeModel({
+      model: config.model,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+        temperature: 0,
+      },
+    });
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: base64Image,
+          mimeType: mimeType,
+        },
+      },
+      { text: config.prompt },
+    ]);
+
+    const text = result.response.text();
+    console.log(`Success with Gemini model: ${config.model}`);
+    return normalizeReceiptDraft(JSON.parse(text));
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.warn(`Gemini OCR failed:`, message);
+    throw err instanceof Error ? err : new Error(message);
+  }
 }

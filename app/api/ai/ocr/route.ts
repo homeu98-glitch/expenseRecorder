@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { processReceiptWithQwen } from '@/lib/qwen';
+import { processReceiptWithFallback } from '@/lib/ocr';
 
 export async function POST(request: Request) {
   try {
@@ -9,8 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
-    // Call Alibaba Cloud Qwen-VL OCR
-    const result = await processReceiptWithQwen(image, mimeType || 'image/jpeg');
+    const result = await processReceiptWithFallback(image, mimeType || 'image/jpeg');
 
     return NextResponse.json(result);
   } catch (err: unknown) {

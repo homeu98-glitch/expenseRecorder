@@ -213,7 +213,7 @@ export default function UploadPage() {
             {loading ? (
               <>
                 <Loader2 className="animate-spin" size={24} />
-                <span>Gemini AI 正在分析收據...</span>
+                <span>AI 正在分析收據...</span>
               </>
             ) : (
               <>
