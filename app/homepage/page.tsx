@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { clsx } from "clsx";
 import {
   ArrowRight,
+  BadgeCheck,
   CheckCircle2,
+  Handshake,
   Globe2,
   Gift,
+  MessageSquareText,
+  Shield,
+  Truck,
   Play,
   QrCode,
   Sparkles,
@@ -69,6 +74,7 @@ const metrics = [
   { value: "免費", label: "永久免費入駐" },
   { value: "本地", label: "為澳門商戶而設" },
   { value: "一站式", label: "會員、點餐、優惠整合" },
+  { value: "不經手現金", label: "平台只做記錄與對接" },
 ];
 
 const videos: VideoItem[] = [
@@ -315,35 +321,13 @@ function MobileFeatureList() {
   );
 }
 
-function StickyFeatureScroll() {
+function DesktopFeatureTabs() {
   const [active, setActive] = useState(0);
-  const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
-
-  useEffect(() => {
-    const nodes = itemRefs.current.filter(Boolean) as HTMLDivElement[];
-    if (!nodes.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => (b.intersectionRatio || 0) - (a.intersectionRatio || 0))[0];
-        if (!visible) return;
-        const index = nodes.findIndex((node) => node === visible.target);
-        if (index >= 0) setActive(index);
-      },
-      { rootMargin: "-30% 0px -55% 0px", threshold: [0.1, 0.2, 0.3, 0.4, 0.5] }
-    );
-
-    nodes.forEach((node) => observer.observe(node));
-    return () => observer.disconnect();
-  }, []);
-
   const current = features[active];
 
   return (
     <div className="hidden lg:grid grid-cols-2 gap-10 items-start">
-      <div className="lg:sticky lg:top-24 space-y-4">
+      <div className="space-y-5">
         <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-4 py-2">
           <Users size={14} />
           <span>解決店主痛點</span>
@@ -353,58 +337,44 @@ function StickyFeatureScroll() {
           <span className="text-emerald-600">簡單</span>開始
         </div>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-xl shadow-gray-100">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div className="text-sm font-black text-gray-900">{current.title}</div>
-              <div className="text-sm text-gray-600 leading-relaxed">{current.description}</div>
-            </div>
-            <div className="shrink-0 w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-              {current.icon}
-            </div>
-          </div>
-        </div>
-
-        <PhoneFrame className="w-[min(84vw,350px)] sm:w-[330px] lg:w-[360px]">
+        <PhoneFrame className="w-[min(84vw,360px)]">
           <Image
             src={current.media.src}
             alt={current.media.alt}
             fill
-            sizes="(max-width: 640px) 84vw, 360px"
+            sizes="360px"
             className="object-cover"
           />
         </PhoneFrame>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-3">
         {features.map((feature, idx) => (
-          <div
+          <button
             key={feature.title}
-            ref={(el) => {
-              itemRefs.current[idx] = el;
-            }}
+            onClick={() => setActive(idx)}
             className={clsx(
-              "rounded-3xl border px-6 py-6 transition-all",
+              "w-full text-left rounded-3xl border px-6 py-5 transition-all",
               idx === active
-                ? "border-emerald-200 bg-emerald-50/50 shadow-xl shadow-emerald-100"
-                : "border-gray-200 bg-white"
+                ? "border-emerald-200 bg-emerald-50/60 shadow-xl shadow-emerald-100"
+                : "border-gray-200 bg-white hover:bg-gray-50"
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-4">
               <div
                 className={clsx(
-                  "w-10 h-10 rounded-2xl flex items-center justify-center border",
+                  "mt-0.5 w-11 h-11 rounded-2xl flex items-center justify-center border",
                   idx === active ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-gray-50 text-gray-600 border-gray-200"
                 )}
               >
                 {feature.icon}
               </div>
-              <div>
+              <div className="space-y-1">
                 <div className="text-base font-black text-gray-900">{feature.title}</div>
                 <div className="text-sm text-gray-600 leading-relaxed">{feature.description}</div>
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>
@@ -547,8 +517,8 @@ export default function Homepage() {
           <div className="space-y-5">
             <PhoneFrame className="w-[min(84vw,400px)]">
               <Image
-                src="/homepage/screens_phone/macau-ledger-favorites-phone.jpg"
-                alt="我的收藏"
+                src="/homepage/screens_phone/macau-ledger-merchant-recharge-phone.jpg"
+                alt="商家充值介面"
                 fill
                 sizes="(max-width: 640px) 84vw, 400px"
                 className="object-cover"
@@ -574,7 +544,123 @@ export default function Homepage() {
         <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
           {/* desktop: Apple-style sticky; mobile: vertical list */}
           <MobileFeatureList />
-          <StickyFeatureScroll />
+          <DesktopFeatureTabs />
+        </div>
+      </FullBleedSection>
+
+      <FullBleedSection id="delivery" className="bg-white">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-4 py-2">
+              <Truck size={14} />
+              <span>車手配送</span>
+            </div>
+            <div className="mt-4 text-3xl sm:text-5xl font-black text-slate-950 leading-tight tracking-tight">
+              下單即對接車手
+              <span className="block text-slate-500">訂單、配送、對話，一個平台搞掂</span>
+            </div>
+            <div className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
+              平台完全不經手現金，只提供本地化的訂單流程、配送對接與狀態追蹤，專心為澳門商家服務。
+            </div>
+          </div>
+
+          <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100">
+                <Truck size={18} />
+              </div>
+              <div className="mt-4 text-base font-black text-slate-950">平台訂單直連車手</div>
+              <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                顧客從平台下單後，可直接對接車手配送；商家可即時查看車手狀態（已接單／取貨中／派送中／已完成）。
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-100">
+                <Handshake size={18} />
+              </div>
+              <div className="mt-4 text-base font-black text-slate-950">自家私人單一鍵派送</div>
+              <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                不用依賴其他平台。只需填寫收件資料與地址，即可一鍵派送，直接對接車手平台。
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+                <MessageSquareText size={18} />
+              </div>
+              <div className="mt-4 text-base font-black text-slate-950">三方對話更順暢</div>
+              <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                車手、商家、顧客可在平台內直接對話，處理地址、改單、到達等問題更方便。
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6">
+              <div className="flex items-center gap-2 text-sm font-black text-slate-950">
+                <Shield size={18} />
+                <span>平台不經手金流</span>
+              </div>
+              <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                現金或商家指定方式在店內進行；平台只做訂單、配送、會員與對帳記錄，保障定位清晰、服務更穩定。
+              </div>
+            </div>
+            <PhoneFrame className="w-[min(84vw,360px)] mx-0 lg:mx-auto">
+              <Image
+                src="/homepage/screens_phone/macau-ledger-delivery-dispatch-phone.jpg"
+                alt="外部派送 / 一鍵派送"
+                fill
+                sizes="360px"
+                className="object-cover"
+              />
+            </PhoneFrame>
+          </div>
+        </div>
+      </FullBleedSection>
+
+      <FullBleedSection id="topup" className="bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_55%,#ffffff_100%)]">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+            <div className="space-y-5">
+              <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-4 py-2">
+                <BadgeCheck size={14} />
+                <span>線下充值自動對帳</span>
+              </div>
+              <div className="text-3xl sm:text-5xl font-black text-slate-950 leading-tight tracking-tight">
+                大量充值，一次批核
+                <span className="block text-slate-500">系統自動對帳，直接入客人戶口</span>
+              </div>
+              <div className="text-base sm:text-lg text-slate-600 leading-relaxed">
+                尤其係活動期間（例如澳門消費大獎賞），充值量大、批核頻繁。系統可把線下充值記錄集中處理，
+                批核後自動入帳到客人戶口，減少人手對帳壓力。
+              </div>
+              <div className="rounded-3xl border border-amber-200 bg-white p-6 shadow-xl shadow-amber-100">
+                <div className="text-sm font-black text-slate-950">活動支援</div>
+                <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                  可配合活動期的高頻交易流程，將對帳、入帳、記錄統一管理，令前線同事更容易處理大量充值。
+                </div>
+                <Link
+                  href="https://www.macaospendingrewards.com/#/website/index?g=906539"
+                  target="_blank"
+                  className="mt-4 inline-flex items-center text-sm font-black text-amber-700 hover:underline"
+                >
+                  參考：澳門消費大獎賞
+                  <ArrowRight className="ml-2" size={16} />
+                </Link>
+              </div>
+            </div>
+
+            <PhoneFrame className="w-[min(84vw,400px)]">
+              <Image
+                src="/homepage/screens_phone/macau-ledger-merchant-recharge-phone.jpg"
+                alt="充值介面"
+                fill
+                sizes="(max-width: 640px) 84vw, 400px"
+                className="object-cover"
+              />
+            </PhoneFrame>
+          </div>
         </div>
       </FullBleedSection>
 
