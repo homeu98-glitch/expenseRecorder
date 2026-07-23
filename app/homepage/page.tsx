@@ -113,6 +113,24 @@ const videos: VideoItem[] = [
   },
 ];
 
+const deliveryShots: Slide[] = [
+  {
+    title: "平台下單入口",
+    caption: "顧客可直接在平台落單，商家集中處理訂單流程",
+    src: "/homepage/screens_phone/macau-ledger-ordering-list-phone.jpg",
+  },
+  {
+    title: "一鍵派送",
+    caption: "填寫地址與資料後，可直接對接車手平台派送",
+    src: "/homepage/screens_phone/macau-ledger-delivery-dispatch-phone.jpg",
+  },
+  {
+    title: "三方對話",
+    caption: "車手、商家、顧客可直接在平台內對話跟進問題",
+    src: "/homepage/screens_phone/macau-ledger-delivery-chat-phone.jpg",
+  },
+];
+
 const topupShots: TopupShot[] = [
   { title: "充值上傳", src: "/homepage/screens_phone/topup-upload-phone.jpg" },
   { title: "批核介面", src: "/homepage/screens_phone/topup-audit-entry-phone.jpg" },
@@ -164,31 +182,6 @@ function PhoneFrame({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function LaptopFrame({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={clsx("relative mx-auto w-[min(92vw,900px)]", className)}>
-      <div className="rounded-[28px] bg-[#0b1220] p-3 shadow-[0_30px_100px_rgba(2,6,23,0.35)] ring-1 ring-black/10">
-        <div className="overflow-hidden rounded-[18px] bg-black">
-          <div className="h-9 bg-[#0b1220] flex items-center gap-2 px-4 border-b border-white/5">
-            <div className="h-3 w-3 rounded-full bg-red-400/80" />
-            <div className="h-3 w-3 rounded-full bg-amber-300/80" />
-            <div className="h-3 w-3 rounded-full bg-emerald-400/80" />
-            <div className="ml-3 text-xs font-black tracking-widest text-white/60">商家後台</div>
-          </div>
-          <div className="relative aspect-[16/10] bg-white">{children}</div>
-        </div>
-      </div>
-      <div className="mx-auto mt-3 h-3 w-[45%] rounded-full bg-slate-200 shadow-inner" />
     </div>
   );
 }
@@ -416,6 +409,53 @@ function DesktopFeatureTabs() {
             </div>
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function DeliveryCarousel() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActive((prev) => (prev + 1) % deliveryShots.length);
+    }, 3400);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const shot = deliveryShots[active];
+
+  return (
+    <div className="space-y-4">
+      <PhoneFrame className="w-[min(86vw,390px)]">
+        <Image
+          src={shot.src}
+          alt={shot.title}
+          fill
+          sizes="(max-width: 640px) 86vw, 390px"
+          className="object-cover"
+        />
+      </PhoneFrame>
+
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-sm font-black text-gray-900">{shot.title}</div>
+          <div className="text-xs text-gray-500">{shot.caption}</div>
+        </div>
+        <div className="flex items-center gap-2">
+          {deliveryShots.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActive(idx)}
+              className={clsx(
+                "h-2.5 rounded-full transition-all",
+                idx === active ? "w-8 bg-indigo-600" : "w-2.5 bg-gray-300 hover:bg-gray-400"
+              )}
+              aria-label={`切換到第 ${idx + 1} 張`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -690,15 +730,7 @@ export default function Homepage() {
                 現金或商家指定方式在店內進行；平台只做訂單、配送、會員與對帳記錄，保障定位清晰、服務更穩定。
               </div>
             </div>
-            <PhoneFrame className="w-[min(84vw,360px)] mx-0 lg:mx-auto">
-              <Image
-                src="/homepage/screens_phone/macau-ledger-delivery-dispatch-phone.jpg"
-                alt="外部派送 / 一鍵派送"
-                fill
-                sizes="360px"
-                className="object-cover"
-              />
-            </PhoneFrame>
+            <DeliveryCarousel />
           </div>
         </div>
       </FullBleedSection>
@@ -750,20 +782,6 @@ export default function Homepage() {
             </div>
 
             <div className="relative">
-              {/* desktop behind */}
-              <div className="hidden lg:block absolute -right-24 top-14 origin-top-right scale-[0.6] opacity-95">
-                <LaptopFrame className="w-[900px]">
-                  <Image
-                    src="/homepage/screens_desktop/topup-admin-desktop.png"
-                    alt="商家後台批核列表（電腦版）"
-                    fill
-                    sizes="900px"
-                    className="object-contain bg-white"
-                  />
-                </LaptopFrame>
-              </div>
-
-              {/* phone in front */}
               <div className="relative z-10">
                 <PhoneFrame className="w-[min(84vw,420px)]">
                   <TopupCarousel />
