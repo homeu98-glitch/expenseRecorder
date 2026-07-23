@@ -35,27 +35,27 @@ const slides: Slide[] = [
   {
     title: "商戶收銀頁",
     caption: "商家登入後即可操作扣點、充值與會員碼掃描",
-    src: "/homepage/screens/macau-ledger-merchant-home.png",
+    src: "/homepage/screens_phone/macau-ledger-merchant-home-phone.jpg",
   },
   {
     title: "全部商家",
     caption: "免費展示店鋪資訊，讓好店被看見",
-    src: "/homepage/screens/macau-ledger-all-shops.png",
+    src: "/homepage/screens_phone/macau-ledger-all-shops-phone.jpg",
   },
   {
     title: "點餐列表",
     caption: "提供本地店鋪線上點餐入口",
-    src: "/homepage/screens/macau-ledger-ordering-list.png",
+    src: "/homepage/screens_phone/macau-ledger-ordering-list-phone.jpg",
   },
   {
     title: "商家頁",
     caption: "店鋪介紹、儲值餘額、專屬優惠一次到位",
-    src: "/homepage/screens/macau-ledger-shop-page.png",
+    src: "/homepage/screens_phone/macau-ledger-shop-page-phone.jpg",
   },
   {
     title: "優惠券",
     caption: "禮品券 / 現金券，提升回購與推廣效果",
-    src: "/homepage/screens/macau-ledger-coupons.png",
+    src: "/homepage/screens_phone/macau-ledger-coupons-phone.jpg",
   },
 ];
 
@@ -124,15 +124,17 @@ function PhoneFrame({
   className?: string;
 }) {
   return (
-    <div className={clsx("relative mx-auto w-[min(84vw,360px)]", className)}>
-      <div className="absolute -inset-6 rounded-[56px] bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.22),transparent_35%),radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.18),transparent_35%)] blur-2xl" />
-      <div className="relative rounded-[48px] bg-[#111827] p-[10px] shadow-[0_30px_90px_rgba(15,23,42,0.35)]">
-        <div className="overflow-hidden rounded-[38px] bg-black">
-          <div className="relative flex h-[26px] items-center justify-center bg-black">
-            <div className="h-[7px] w-[88px] rounded-full bg-white/10" />
-          </div>
-          <div className="relative aspect-[9/19.5] bg-[linear-gradient(180deg,#0f172a_0%,#020617_100%)]">
+    <div className={clsx("relative mx-auto w-[min(86vw,420px)]", className)}>
+      <div className="absolute -inset-8 rounded-[68px] bg-[radial-gradient(circle_at_25%_15%,rgba(251,191,36,0.22),transparent_35%),radial-gradient(circle_at_70%_10%,rgba(244,63,94,0.18),transparent_35%),radial-gradient(circle_at_70%_85%,rgba(34,197,94,0.18),transparent_35%)] blur-2xl" />
+      <div className="relative rounded-[56px] bg-[#0b0f1a] p-[10px] shadow-[0_35px_120px_rgba(2,6,23,0.45)] ring-1 ring-black/20">
+        <div className="relative overflow-hidden rounded-[46px] bg-black">
+          {/* “Dynamic Island” */}
+          <div className="absolute left-1/2 top-3 z-20 h-[22px] w-[96px] -translate-x-1/2 rounded-full bg-black/90 ring-1 ring-white/10" />
+          {/* Screen */}
+          <div className="relative aspect-[9/19.5] bg-black">
             {children}
+            {/* subtle screen reflection */}
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.10),transparent_30%,transparent_60%,rgba(255,255,255,0.08))] opacity-60" />
           </div>
         </div>
       </div>
@@ -155,9 +157,9 @@ function Slider() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
       <div className="space-y-4">
-        <div className="inline-flex items-center space-x-2 rounded-full border border-blue-100 bg-white/80 px-4 py-2 text-xs font-black tracking-widest text-blue-700 shadow-sm backdrop-blur">
+        <div className="inline-flex items-center space-x-2 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-xs font-black tracking-widest text-rose-700 shadow-sm backdrop-blur">
           <Sparkles size={14} />
-          <span>澳門本地 · 永久免費</span>
+          <span>免費入駐 · 澳門本地平台</span>
         </div>
         <div className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 leading-[1.05] tracking-tight">
           澳門會員通
@@ -180,17 +182,17 @@ function Slider() {
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-3">
+        <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <Link
             href="https://macau-ledger.vercel.app/merchant/login"
-            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 text-white font-black px-6 py-4 shadow-xl shadow-slate-300 hover:bg-slate-900 transition-colors"
+            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 text-white font-black px-6 py-4 shadow-xl shadow-rose-200 hover:brightness-105 transition-all"
           >
-            立即使用
+            商家立即入駐
             <ArrowRight className="ml-2" size={18} />
           </Link>
           <button
             onClick={() => document.getElementById("videos")?.scrollIntoView({ behavior: "smooth" })}
-            className="inline-flex items-center justify-center rounded-2xl bg-white/80 border border-white text-slate-900 font-black px-6 py-4 hover:bg-white transition-colors"
+            className="inline-flex items-center justify-center rounded-2xl bg-white/85 border border-white text-slate-900 font-black px-6 py-4 hover:bg-white transition-colors shadow-sm"
           >
             觀看教學
             <Play className="ml-2" size={18} />
@@ -214,7 +216,8 @@ function Slider() {
             alt={slide.title}
             fill
             sizes="(max-width: 640px) 86vw, 390px"
-            className="object-contain object-top p-2"
+            className="object-cover"
+            priority
           />
         </PhoneFrame>
 
@@ -255,35 +258,35 @@ const features: Feature[] = [
     description:
       "商家入口獨立，登入後即可處理扣點、充值與會員碼掃描，適合前台和店員快速使用。",
     icon: <QrCode size={18} />,
-    media: { src: "/homepage/screens/macau-ledger-merchant-home.png", alt: "商戶收銀頁" },
+    media: { src: "/homepage/screens_phone/macau-ledger-merchant-home-phone.jpg", alt: "商戶收銀頁" },
   },
   {
     title: "免費本地平台，讓好店被看見",
     description:
       "為澳門中小企打造的免費展示平台，店鋪資料、海報、菜單、地址一次呈現，減少對外賣/廣告平台的依賴。",
     icon: <Store size={18} />,
-    media: { src: "/homepage/screens/macau-ledger-all-shops.png", alt: "全部商家" },
+    media: { src: "/homepage/screens_phone/macau-ledger-all-shops-phone.jpg", alt: "全部商家" },
   },
   {
     title: "線上點餐，操作更順",
     description:
       "提供店鋪點餐入口與訂單頁，讓顧客下單更方便，商戶處理更清晰。",
     icon: <UtensilsCrossed size={18} />,
-    media: { src: "/homepage/screens/macau-ledger-ordering-menu.png", alt: "點餐頁" },
+    media: { src: "/homepage/screens_phone/macau-ledger-ordering-menu-phone.jpg", alt: "點餐頁" },
   },
   {
     title: "會員與儲值管理，對帳更輕鬆",
     description:
       "自動記錄儲值與消費，對帳一秒搞定，減少爭議與人手錯漏。",
     icon: <Wallet size={18} />,
-    media: { src: "/homepage/screens/macau-ledger-shop-page.png", alt: "商家頁" },
+    media: { src: "/homepage/screens_phone/macau-ledger-shop-page-phone.jpg", alt: "商家頁" },
   },
   {
     title: "派券推廣，提升回購",
     description:
       "現金券、禮品券、活動推廣集中管理，吸引新客、喚醒熟客。",
     icon: <TicketPercent size={18} />,
-    media: { src: "/homepage/screens/macau-ledger-coupons.png", alt: "優惠券" },
+    media: { src: "/homepage/screens_phone/macau-ledger-coupons-phone.jpg", alt: "優惠券" },
   },
 ];
 
@@ -343,7 +346,7 @@ function StickyFeatureScroll() {
             alt={current.media.alt}
             fill
             sizes="(max-width: 640px) 84vw, 360px"
-            className="object-contain object-top p-2"
+            className="object-cover"
           />
         </PhoneFrame>
       </div>
@@ -441,9 +444,9 @@ export default function Homepage() {
                   </button>
                   <Link
                     href="https://macau-ledger.vercel.app/merchant/login"
-                    className="inline-flex items-center justify-center rounded-xl bg-slate-950 text-white px-4 py-2 shadow-lg shadow-slate-200 hover:bg-slate-900 transition-colors"
+                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 text-white px-4 py-2 shadow-lg shadow-rose-200 hover:brightness-105 transition-all"
                   >
-                    立即使用
+                    商家入駐
                   </Link>
                 </nav>
               </header>
@@ -519,11 +522,11 @@ export default function Homepage() {
           <div className="space-y-5">
             <PhoneFrame className="w-[min(84vw,400px)]">
               <Image
-                src="/homepage/screens/macau-ledger-favorites.png"
+                src="/homepage/screens_phone/macau-ledger-favorites-phone.jpg"
                 alt="我的收藏"
                 fill
                 sizes="(max-width: 640px) 84vw, 400px"
-                className="object-contain object-top p-2"
+                className="object-cover"
               />
             </PhoneFrame>
 
@@ -590,9 +593,9 @@ export default function Homepage() {
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Link
                   href="https://macau-ledger.vercel.app/merchant/login"
-                  className="inline-flex items-center justify-center rounded-2xl bg-slate-950 text-white font-black px-6 py-4 hover:bg-black transition-colors"
+                  className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 text-white font-black px-6 py-4 hover:brightness-105 transition-all shadow-xl shadow-rose-200"
                 >
-                  立即使用
+                  商家立即入駐
                   <ArrowRight className="ml-2" size={18} />
                 </Link>
                 <Link
