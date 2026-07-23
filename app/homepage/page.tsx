@@ -136,7 +136,7 @@ function Slider() {
           <img
             src={slide.src}
             alt={slide.title}
-            className="w-full h-[560px] sm:h-[620px] object-cover"
+            className="w-full h-[560px] sm:h-[620px] object-contain bg-black"
           />
         </PhoneFrame>
 
@@ -264,7 +264,11 @@ function StickyFeatureScroll() {
 
         <PhoneFrame>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={current.media.src} alt={current.media.alt} className="w-full h-[620px] object-cover" />
+          <img
+            src={current.media.src}
+            alt={current.media.alt}
+            className="w-full h-[620px] object-contain bg-black"
+          />
         </PhoneFrame>
       </div>
 
@@ -396,7 +400,7 @@ export default function Homepage() {
               <img
                 src="/homepage/screens/macau-ledger-favorites.png"
                 alt="我的收藏"
-                className="w-full h-[620px] object-cover"
+                className="w-full h-[620px] object-contain bg-black"
               />
             </PhoneFrame>
 
@@ -443,16 +447,14 @@ export default function Homepage() {
                   使用教學
                 </Link>
               </div>
-              <div className="text-xs text-gray-500">
-                提示：此 QR code 是佔位圖，之後可以替換成真實微信群 QR code。
-              </div>
+          <div className="text-xs text-gray-500">掃描加入社群，交流使用心得與最新更新。</div>
             </div>
 
             <div className="flex items-center justify-center">
               <div className="rounded-3xl bg-white border border-gray-200 p-6 shadow-lg shadow-gray-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/homepage/wechat-qr.svg"
+                  src="/homepage/wechat-qr.jpg"
                   alt="WeChat 群 QR Code"
                   className="w-[240px] h-[240px]"
                 />
@@ -478,4 +480,3 @@ export default function Homepage() {
     </div>
   );
 }
-

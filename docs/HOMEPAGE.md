@@ -25,16 +25,19 @@ public/homepage/screens/
   macau-ledger-shop-page.png
   macau-ledger-coupons.png
 
-public/homepage/wechat-qr.svg
+public/homepage/wechat-qr.jpg
+public/homepage/wechat-qr.svg（舊佔位圖，可保留或刪除）
 ```
 
 ### 替換微信群 QR code
 
-目前 `wechat-qr.svg` 是佔位圖。要替換成真實微信群 QR code：
+目前網站會使用 `wechat-qr.jpg`。要替換成你最新的微信群 QR code：
 
-1. 把你的 QR code 圖片（建議 `png`）放到：
+1. 直接替換檔案：
+   - `public/homepage/wechat-qr.jpg`
+2. 如你想改用 `png`，把檔案放到：
    - `public/homepage/wechat-qr.png`
-2. 把 `app/homepage/page.tsx` 裡 `src="/homepage/wechat-qr.svg"` 改成：
+   然後把 `app/homepage/page.tsx` 的圖片路徑改為：
    - `src="/homepage/wechat-qr.png"`
 
 ## 公開訪問設定
@@ -43,4 +46,3 @@ public/homepage/wechat-qr.svg
 
 1. `components/AuthGuard.tsx` 允許 `/homepage` 在未登入狀態瀏覽
 2. `components/NavigationWrapper.tsx` 在 `/homepage` 隱藏系統內部導航
-
