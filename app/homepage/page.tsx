@@ -78,6 +78,11 @@ const videos: VideoItem[] = [
     youtubeId: "U5vdjXtkJjQ",
   },
   {
+    title: "派單系統",
+    description: "適合有外賣/自取需求的商戶：派單、處理、狀態更新流程示範。",
+    youtubeId: "3WAvt-ma_BE",
+  },
+  {
     title: "優惠券設置與使用教學",
     description: "了解如何派發現金券、禮品券，以及如何用優惠帶動回購。",
     youtubeId: "pQkeOyK08Xk",
@@ -290,6 +295,38 @@ const features: Feature[] = [
   },
 ];
 
+function MobileFeatureList() {
+  return (
+    <div className="space-y-10 lg:hidden">
+      {features.map((feature) => (
+        <div key={feature.title} className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100">
+          <div className="flex items-start gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-slate-950 text-white flex items-center justify-center shadow-sm">
+              {feature.icon}
+            </div>
+            <div className="space-y-1">
+              <div className="text-base font-black text-slate-950">{feature.title}</div>
+              <div className="text-sm text-slate-600 leading-relaxed">{feature.description}</div>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <PhoneFrame className="w-[min(92vw,390px)]">
+              <Image
+                src={feature.media.src}
+                alt={feature.media.alt}
+                fill
+                sizes="(max-width: 640px) 92vw, 390px"
+                className="object-cover"
+              />
+            </PhoneFrame>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StickyFeatureScroll() {
   const [active, setActive] = useState(0);
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -317,7 +354,7 @@ function StickyFeatureScroll() {
   const current = features[active];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+    <div className="hidden lg:grid grid-cols-2 gap-10 items-start">
       <div className="lg:sticky lg:top-24 space-y-4">
         <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-4 py-2">
           <Users size={14} />
@@ -547,6 +584,8 @@ export default function Homepage() {
 
       <FullBleedSection id="features" className="bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
+          {/* desktop: Apple-style sticky; mobile: vertical list */}
+          <MobileFeatureList />
           <StickyFeatureScroll />
         </div>
       </FullBleedSection>
@@ -556,14 +595,14 @@ export default function Homepage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-rose-700 bg-rose-50 border border-rose-100 rounded-full px-4 py-2">
               <Play size={14} />
-              <span>教學片段</span>
+              <span>商家教學</span>
             </div>
             <div className="mt-4 text-3xl sm:text-5xl font-black text-slate-950 leading-tight tracking-tight">
               直接睇教學
               <span className="block text-slate-500">把功能介紹放回真正的使用情境</span>
             </div>
             <div className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
-              不只是放一條連結，而是把核心教學直接嵌入官網，讓商戶與用家一打開就能了解平台怎樣用。
+              呢一段主要係俾商戶快速上手：派單、優惠券、打單 app、訂單系統等教學都直接放喺官網。
             </div>
           </div>
 
@@ -611,16 +650,14 @@ export default function Homepage() {
             </div>
 
             <div className="flex items-center justify-center">
-              <div className="rounded-[32px] bg-white border border-slate-200 p-6 shadow-xl shadow-slate-100">
+              <div className="rounded-[32px] bg-white border border-slate-200 p-4 shadow-xl shadow-slate-100">
                 <Image
                   src="/homepage/wechat-qr.jpg"
                   alt="WeChat 群 QR Code"
-                  width={280}
-                  height={280}
-                  className="w-[240px] h-[240px]"
+                  width={520}
+                  height={520}
+                  className="w-[260px] h-[260px] object-contain"
                 />
-                <div className="mt-4 text-center text-sm font-black text-slate-950">WeChat 群</div>
-                <div className="text-center text-xs text-slate-500">掃描加入社群</div>
               </div>
             </div>
           </div>
