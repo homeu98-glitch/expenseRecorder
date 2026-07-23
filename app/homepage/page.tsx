@@ -34,7 +34,7 @@ type VideoItem = {
 const slides: Slide[] = [
   {
     title: "商戶收銀頁",
-    caption: "商家登入後即可操作扣點、充值與會員碼掃描",
+    caption: "扣點 / 充值一頁完成，前線同事更易上手",
     src: "/homepage/screens_phone/macau-ledger-merchant-home-phone.jpg",
   },
   {
@@ -261,7 +261,7 @@ const features: Feature[] = [
   {
     title: "商戶入口清晰，前線同事易上手",
     description:
-      "商家入口獨立，登入後即可處理扣點、充值與會員碼掃描，適合前台和店員快速使用。",
+      "商家入口獨立，登入後即可處理扣點與充值，適合前台和店員快速使用。",
     icon: <QrCode size={18} />,
     media: { src: "/homepage/screens_phone/macau-ledger-merchant-home-phone.jpg", alt: "商戶收銀頁" },
   },
@@ -308,18 +308,6 @@ function MobileFeatureList() {
               <div className="text-base font-black text-slate-950">{feature.title}</div>
               <div className="text-sm text-slate-600 leading-relaxed">{feature.description}</div>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <PhoneFrame className="w-[min(92vw,390px)]">
-              <Image
-                src={feature.media.src}
-                alt={feature.media.alt}
-                fill
-                sizes="(max-width: 640px) 92vw, 390px"
-                className="object-cover"
-              />
-            </PhoneFrame>
           </div>
         </div>
       ))}
