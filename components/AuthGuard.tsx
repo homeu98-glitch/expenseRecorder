@@ -10,6 +10,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const user = getShopUser();
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/sso";
+  const isPublicPage = pathname === "/homepage";
   const isAdminPage = pathname.startsWith("/admin");
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       })();
     }
 
-    if (!user && !isAuthPage) {
+    if (!user && !isAuthPage && !isPublicPage) {
       router.push("/login");
       return;
     }
@@ -39,9 +40,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (user && isAuthPage) {
       router.push(user.role === "admin" ? "/admin" : "/");
     }
-  }, [isAdminPage, isAuthPage, router, user]);
+  }, [isAdminPage, isAuthPage, isPublicPage, router, user]);
 
-  if ((!user && !isAuthPage) || (isAdminPage && user?.role !== "admin")) {
+  if ((!user && !isAuthPage && !isPublicPage) || (isAdminPage && user?.role !== "admin")) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-blue-600 font-medium text-lg">載入中...</div>

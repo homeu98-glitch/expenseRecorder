@@ -5,7 +5,7 @@ import { Navigation } from "@/components/Navigation";
 
 export function NavigationWrapper() {
   const pathname = usePathname();
-  const noNavRoutes = ["/login", "/signup"];
+  const noNavRoutes = ["/login", "/signup", "/sso", "/homepage"];
 
   if (noNavRoutes.includes(pathname)) {
     return null;
