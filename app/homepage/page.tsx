@@ -9,6 +9,7 @@ import {
   Laptop,
   BadgeCheck,
   CheckCircle2,
+  ChevronDown,
   Handshake,
   Globe2,
   Gift,
@@ -335,21 +336,55 @@ const features: Feature[] = [
 ];
 
 function MobileFeatureList() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+
   return (
-    <div className="space-y-10 lg:hidden">
-      {features.map((feature) => (
-        <div key={feature.title} className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100">
-          <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-slate-950 text-white flex items-center justify-center shadow-sm">
-              {feature.icon}
-            </div>
-            <div className="space-y-1">
-              <div className="text-base font-black text-slate-950">{feature.title}</div>
-              <div className="text-sm text-slate-600 leading-relaxed">{feature.description}</div>
-            </div>
+    <div className="lg:hidden rounded-[28px] border border-slate-200 bg-white shadow-xl shadow-slate-100 overflow-hidden">
+      {features.map((feature, idx) => {
+        const open = openIndex === idx;
+        return (
+          <div key={feature.title} className={clsx(idx !== 0 && "border-t border-slate-200")}>
+            <button
+              onClick={() => setOpenIndex((cur) => (cur === idx ? null : idx))}
+              className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0">
+                  {feature.icon}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-black text-slate-950 truncate">{feature.title}</div>
+                  <div className="text-xs text-slate-500 truncate">點擊展開查看示例畫面</div>
+                </div>
+              </div>
+              <ChevronDown
+                size={18}
+                className={clsx(
+                  "shrink-0 text-slate-500 transition-transform",
+                  open ? "rotate-180" : "rotate-0"
+                )}
+              />
+            </button>
+
+            {open && (
+              <div className="px-5 pb-5">
+                <div className="text-sm text-slate-600 leading-relaxed">{feature.description}</div>
+                <div className="mt-4">
+                  <PhoneFrame className="w-[min(86vw,390px)]">
+                    <Image
+                      src={feature.media.src}
+                      alt={feature.media.alt}
+                      fill
+                      sizes="(max-width: 640px) 86vw, 390px"
+                      className="object-cover"
+                    />
+                  </PhoneFrame>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -667,6 +702,16 @@ export default function Homepage() {
       <FullBleedSection id="features" className="bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
           {/* desktop: Apple-style sticky; mobile: vertical list */}
+          <div className="lg:hidden mb-8 space-y-3">
+            <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-4 py-2">
+              <Users size={14} />
+              <span>解決店主痛點</span>
+            </div>
+            <div className="text-3xl font-black text-slate-950 leading-tight">
+              生意管理，從 <span className="text-emerald-600">簡單</span>開始
+            </div>
+            <div className="text-sm text-slate-600">點擊每個功能標題即可展開，查看手機示例畫面。</div>
+          </div>
           <MobileFeatureList />
           <DesktopFeatureTabs />
         </div>
