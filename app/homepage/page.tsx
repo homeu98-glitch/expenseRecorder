@@ -6,13 +6,17 @@ import Image from "next/image";
 import { clsx } from "clsx";
 import {
   ArrowRight,
+  Laptop,
+  MousePointerClick,
   BadgeCheck,
   CheckCircle2,
   Handshake,
   Globe2,
   Gift,
   MessageSquareText,
+  Settings2,
   Shield,
+  Smartphone,
   Truck,
   Play,
   QrCode,
@@ -149,6 +153,31 @@ function PhoneFrame({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LaptopFrame({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={clsx("relative mx-auto w-[min(92vw,900px)]", className)}>
+      <div className="rounded-[28px] bg-[#0b1220] p-3 shadow-[0_30px_100px_rgba(2,6,23,0.35)] ring-1 ring-black/10">
+        <div className="overflow-hidden rounded-[18px] bg-black">
+          <div className="h-9 bg-[#0b1220] flex items-center gap-2 px-4 border-b border-white/5">
+            <div className="h-3 w-3 rounded-full bg-red-400/80" />
+            <div className="h-3 w-3 rounded-full bg-amber-300/80" />
+            <div className="h-3 w-3 rounded-full bg-emerald-400/80" />
+            <div className="ml-3 text-xs font-black tracking-widest text-white/60">商家後台</div>
+          </div>
+          <div className="relative aspect-[16/10] bg-white">{children}</div>
+        </div>
+      </div>
+      <div className="mx-auto mt-3 h-3 w-[45%] rounded-full bg-slate-200 shadow-inner" />
     </div>
   );
 }
@@ -635,6 +664,28 @@ export default function Homepage() {
                 尤其係活動期間（例如澳門消費大獎賞），充值量大、批核頻繁。系統可把線下充值記錄集中處理，
                 批核後自動入帳到客人戶口，減少人手對帳壓力。
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100">
+                  <div className="flex items-center gap-2 text-sm font-black text-slate-950">
+                    <Smartphone size={18} />
+                    <span>手機 + 電腦都支援</span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                    手機方便上傳、查進度；電腦批核更快、畫面更清楚，適配唔同商家習慣。
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100">
+                  <div className="flex items-center gap-2 text-sm font-black text-slate-950">
+                    <Settings2 size={18} />
+                    <span>手動批 + 自動批</span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                    可按商家需要選擇手動核對或自動批核，保障商家利益，同時提升活動期處理效率。
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-3xl border border-amber-200 bg-white p-6 shadow-xl shadow-amber-100">
                 <div className="text-sm font-black text-slate-950">活動支援</div>
                 <div className="mt-2 text-sm text-slate-600 leading-relaxed">
@@ -651,15 +702,87 @@ export default function Homepage() {
               </div>
             </div>
 
-            <PhoneFrame className="w-[min(84vw,400px)]">
-              <Image
-                src="/homepage/screens_phone/macau-ledger-merchant-recharge-phone.jpg"
-                alt="充值介面"
-                fill
-                sizes="(max-width: 640px) 84vw, 400px"
-                className="object-cover"
-              />
-            </PhoneFrame>
+            <div className="relative">
+              {/* desktop behind */}
+              <div className="hidden lg:block absolute -right-6 top-10 w-[760px] opacity-95">
+                <LaptopFrame>
+                  <Image
+                    src="/homepage/screens_desktop/topup-admin-desktop.png"
+                    alt="商家後台批核列表（電腦版）"
+                    fill
+                    sizes="760px"
+                    className="object-contain bg-white"
+                  />
+                </LaptopFrame>
+              </div>
+
+              {/* phone in front */}
+              <div className="relative z-10">
+                <PhoneFrame className="w-[min(84vw,420px)]">
+                  <Image
+                    src="/homepage/screens_phone/topup-audit-entry-phone.jpg"
+                    alt="充值審核（手機版）"
+                    fill
+                    sizes="(max-width: 640px) 84vw, 420px"
+                    className="object-cover"
+                  />
+                </PhoneFrame>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-black text-slate-700">
+                    <Smartphone size={14} />
+                    <span>上傳交易截圖</span>
+                  </div>
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-100">
+                    <div className="relative aspect-[9/16] bg-slate-50">
+                      <Image
+                        src="/homepage/screens_phone/topup-upload-phone.jpg"
+                        alt="充值上傳"
+                        fill
+                        sizes="(max-width: 640px) 33vw, 200px"
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-black text-slate-700">
+                    <MousePointerClick size={14} />
+                    <span>批核紀錄</span>
+                  </div>
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-100">
+                    <div className="relative aspect-[9/16] bg-slate-50">
+                      <Image
+                        src="/homepage/screens_phone/topup-audit-phone.jpg"
+                        alt="批核紀錄"
+                        fill
+                        sizes="(max-width: 640px) 33vw, 200px"
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-black text-slate-700">
+                    <Laptop size={14} />
+                    <span>店主後台</span>
+                  </div>
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-100">
+                    <div className="relative aspect-[16/10] bg-white">
+                      <Image
+                        src="/homepage/screens_desktop/topup-admin-desktop.png"
+                        alt="店主後台批核（桌面）"
+                        fill
+                        sizes="(max-width: 640px) 33vw, 240px"
+                        className="object-contain"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </FullBleedSection>
