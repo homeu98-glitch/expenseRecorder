@@ -7,7 +7,6 @@ import { clsx } from "clsx";
 import {
   ArrowRight,
   Laptop,
-  MousePointerClick,
   BadgeCheck,
   CheckCircle2,
   Handshake,
@@ -38,6 +37,11 @@ type VideoItem = {
   title: string;
   description: string;
   youtubeId: string;
+};
+
+type TopupShot = {
+  title: string;
+  src: string;
 };
 
 const slides: Slide[] = [
@@ -107,6 +111,13 @@ const videos: VideoItem[] = [
     description: "展示線上下單、狀態追蹤與商戶處理流程。",
     youtubeId: "lScWRkgfWII",
   },
+];
+
+const topupShots: TopupShot[] = [
+  { title: "充值上傳", src: "/homepage/screens_phone/topup-upload-phone.jpg" },
+  { title: "批核介面", src: "/homepage/screens_phone/topup-audit-entry-phone.jpg" },
+  { title: "批核紀錄", src: "/homepage/screens_phone/topup-audit-phone.jpg" },
+  { title: "店主後台（手機）", src: "/homepage/screens_phone/topup-dashboard-phone.jpg" },
 ];
 
 function FullBleedSection({
@@ -432,6 +443,50 @@ function VideoCard({ item }: { item: VideoItem }) {
   );
 }
 
+function TopupCarousel() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActive((prev) => (prev + 1) % topupShots.length);
+    }, 3200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const shot = topupShots[active];
+
+  return (
+    <div className="absolute inset-0">
+      <Image
+        src={shot.src}
+        alt={shot.title}
+        fill
+        sizes="(max-width: 640px) 84vw, 420px"
+        className="object-cover"
+        priority={false}
+      />
+
+      <div className="absolute left-3 top-3 rounded-full border border-white/20 bg-black/45 px-3 py-1 text-xs font-black text-white backdrop-blur">
+        {shot.title}
+      </div>
+
+      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
+        {topupShots.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setActive(idx)}
+            className={clsx(
+              "h-2.5 rounded-full transition-all",
+              idx === active ? "w-8 bg-white" : "w-2.5 bg-white/40 hover:bg-white/60"
+            )}
+            aria-label={`切換到 ${idx + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Homepage() {
   const year = useMemo(() => new Date().getFullYear(), []);
 
@@ -691,26 +746,18 @@ export default function Homepage() {
                 <div className="mt-2 text-sm text-slate-600 leading-relaxed">
                   可配合活動期的高頻交易流程，將對帳、入帳、記錄統一管理，令前線同事更容易處理大量充值。
                 </div>
-                <Link
-                  href="https://www.macaospendingrewards.com/#/website/index?g=906539"
-                  target="_blank"
-                  className="mt-4 inline-flex items-center text-sm font-black text-amber-700 hover:underline"
-                >
-                  參考：澳門消費大獎賞
-                  <ArrowRight className="ml-2" size={16} />
-                </Link>
               </div>
             </div>
 
             <div className="relative">
               {/* desktop behind */}
-              <div className="hidden lg:block absolute -right-6 top-10 w-[760px] opacity-95">
-                <LaptopFrame>
+              <div className="hidden lg:block absolute -right-24 top-14 origin-top-right scale-[0.6] opacity-95">
+                <LaptopFrame className="w-[900px]">
                   <Image
                     src="/homepage/screens_desktop/topup-admin-desktop.png"
                     alt="商家後台批核列表（電腦版）"
                     fill
-                    sizes="760px"
+                    sizes="900px"
                     className="object-contain bg-white"
                   />
                 </LaptopFrame>
@@ -719,68 +766,20 @@ export default function Homepage() {
               {/* phone in front */}
               <div className="relative z-10">
                 <PhoneFrame className="w-[min(84vw,420px)]">
-                  <Image
-                    src="/homepage/screens_phone/topup-audit-entry-phone.jpg"
-                    alt="充值審核（手機版）"
-                    fill
-                    sizes="(max-width: 640px) 84vw, 420px"
-                    className="object-cover"
-                  />
+                  <TopupCarousel />
                 </PhoneFrame>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs font-black text-slate-700">
-                    <Smartphone size={14} />
-                    <span>上傳交易截圖</span>
-                  </div>
-                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-100">
-                    <div className="relative aspect-[9/16] bg-slate-50">
-                      <Image
-                        src="/homepage/screens_phone/topup-upload-phone.jpg"
-                        alt="充值上傳"
-                        fill
-                        sizes="(max-width: 640px) 33vw, 200px"
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs font-black text-slate-700">
-                    <MousePointerClick size={14} />
-                    <span>批核紀錄</span>
-                  </div>
-                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-100">
-                    <div className="relative aspect-[9/16] bg-slate-50">
-                      <Image
-                        src="/homepage/screens_phone/topup-audit-phone.jpg"
-                        alt="批核紀錄"
-                        fill
-                        sizes="(max-width: 640px) 33vw, 200px"
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs font-black text-slate-700">
-                    <Laptop size={14} />
-                    <span>店主後台</span>
-                  </div>
-                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-100">
-                    <div className="relative aspect-[16/10] bg-white">
-                      <Image
-                        src="/homepage/screens_desktop/topup-admin-desktop.png"
-                        alt="店主後台批核（桌面）"
-                        fill
-                        sizes="(max-width: 640px) 33vw, 240px"
-                        className="object-contain"
-                      />
-                    </div>
-                  </div>
-                </div>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-black text-slate-600">
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2">
+                  <Smartphone size={14} /> 手機上傳/查進度
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2">
+                  <Laptop size={14} /> 電腦批核更快
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2">
+                  <Settings2 size={14} /> 手動批 / 自動批
+                </span>
               </div>
             </div>
           </div>
