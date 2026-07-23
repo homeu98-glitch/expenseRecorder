@@ -3,6 +3,19 @@
 本頁面是為 `澳門會員通` 製作的公開官網，不需要登入即可瀏覽：
 
 - URL：`/homepage`
+- 商家主入口：`https://macau-ledger.vercel.app/merchant/login`
+
+## 當前頁面內容
+
+首頁目前包含：
+
+- 更完整的品牌 Hero 區塊
+- 3 條主 slogan
+- app 截圖 slider
+- Apple 風格功能展示區
+- 教學影片嵌入區（YouTube iframe）
+- 微信群 QR code 聯絡區
+- footer 與使用教學連結
 
 ## 部署方式
 
@@ -19,6 +32,7 @@ https://<your-domain>/homepage
 ```text
 public/homepage/screens/
   macau-ledger-favorites.png
+  macau-ledger-merchant-home.png
   macau-ledger-all-shops.png
   macau-ledger-ordering-list.png
   macau-ledger-ordering-menu.png
@@ -46,3 +60,24 @@ public/homepage/wechat-qr.svg（舊佔位圖，可保留或刪除）
 
 1. `components/AuthGuard.tsx` 允許 `/homepage` 在未登入狀態瀏覽
 2. `components/NavigationWrapper.tsx` 在 `/homepage` 隱藏系統內部導航
+
+## 教學影片來源
+
+目前嵌入的是以下幾條影片：
+
+- `https://www.youtube.com/watch?v=U5vdjXtkJjQ`
+- `https://www.youtube.com/watch?v=pQkeOyK08Xk`
+- `https://www.youtube.com/watch?v=Ca4iU4qFHmE`
+- `https://www.youtube.com/watch?v=lScWRkgfWII`
+
+如需增減片段，只需修改 `app/homepage/page.tsx` 內的 `videos` 陣列。
+
+## 手機畫面顯示
+
+首頁的手機 mockup 已改成較貼近真機的比例，截圖會以完整顯示為主，不再裁切。
+
+如你之後想微調尺寸，主要可改：
+
+- `PhoneFrame` 的外層寬度
+- `aspect-[9/19.5]`
+- `Image` 的 `object-contain` / padding

@@ -2,8 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { clsx } from "clsx";
-import { ArrowRight, Play, Sparkles, Store, TicketPercent, Users, UtensilsCrossed, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Globe2,
+  Gift,
+  Play,
+  QrCode,
+  Sparkles,
+  Store,
+  TicketPercent,
+  Users,
+  UtensilsCrossed,
+  Wallet,
+} from "lucide-react";
 
 type Slide = {
   title: string;
@@ -11,7 +25,18 @@ type Slide = {
   src: string;
 };
 
+type VideoItem = {
+  title: string;
+  description: string;
+  youtubeId: string;
+};
+
 const slides: Slide[] = [
+  {
+    title: "商戶收銀頁",
+    caption: "商家登入後即可操作扣點、充值與會員碼掃描",
+    src: "/homepage/screens/macau-ledger-merchant-home.png",
+  },
   {
     title: "全部商家",
     caption: "免費展示店鋪資訊，讓好店被看見",
@@ -40,6 +65,35 @@ const slogans = [
   "澳門人自己的會員系統，撐起澳門中小企。",
 ];
 
+const metrics = [
+  { value: "免費", label: "永久免費入駐" },
+  { value: "本地", label: "為澳門商戶而設" },
+  { value: "一站式", label: "會員、點餐、優惠整合" },
+];
+
+const videos: VideoItem[] = [
+  {
+    title: "澳門會員通介紹",
+    description: "快速了解平台定位、核心價值與店主可以如何開始使用。",
+    youtubeId: "U5vdjXtkJjQ",
+  },
+  {
+    title: "優惠券設置與使用教學",
+    description: "了解如何派發現金券、禮品券，以及如何用優惠帶動回購。",
+    youtubeId: "pQkeOyK08Xk",
+  },
+  {
+    title: "打單 app 安裝教學",
+    description: "快速完成安裝與設定，讓前線同事更快上手。",
+    youtubeId: "Ca4iU4qFHmE",
+  },
+  {
+    title: "訂單系統介紹",
+    description: "展示線上下單、狀態追蹤與商戶處理流程。",
+    youtubeId: "lScWRkgfWII",
+  },
+];
+
 function FullBleedSection({
   id,
   className,
@@ -62,16 +116,24 @@ function FullBleedSection({
   );
 }
 
-function PhoneFrame({ children }: { children: React.ReactNode }) {
+function PhoneFrame({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="relative mx-auto w-[280px] sm:w-[320px] lg:w-[360px]">
-      <div className="absolute -inset-[10px] rounded-[44px] bg-gradient-to-b from-black/20 to-black/5 blur-xl" />
-      <div className="relative rounded-[44px] bg-black p-[10px] shadow-2xl shadow-black/30">
-        <div className="rounded-[34px] bg-white overflow-hidden">
-          <div className="h-[20px] bg-black/95 flex items-center justify-center">
-            <div className="h-[6px] w-[70px] rounded-full bg-white/15" />
+    <div className={clsx("relative mx-auto w-[min(84vw,360px)]", className)}>
+      <div className="absolute -inset-6 rounded-[56px] bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.22),transparent_35%),radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.18),transparent_35%)] blur-2xl" />
+      <div className="relative rounded-[48px] bg-[#111827] p-[10px] shadow-[0_30px_90px_rgba(15,23,42,0.35)]">
+        <div className="overflow-hidden rounded-[38px] bg-black">
+          <div className="relative flex h-[26px] items-center justify-center bg-black">
+            <div className="h-[7px] w-[88px] rounded-full bg-white/10" />
           </div>
-          <div className="bg-[#0b1220]">{children}</div>
+          <div className="relative aspect-[9/19.5] bg-[linear-gradient(180deg,#0f172a_0%,#020617_100%)]">
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -93,50 +155,66 @@ function Slider() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
       <div className="space-y-4">
-        <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-4 py-2">
+        <div className="inline-flex items-center space-x-2 rounded-full border border-blue-100 bg-white/80 px-4 py-2 text-xs font-black tracking-widest text-blue-700 shadow-sm backdrop-blur">
           <Sparkles size={14} />
           <span>澳門本地 · 永久免費</span>
         </div>
-        <div className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight">
+        <div className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 leading-[1.05] tracking-tight">
           澳門會員通
-          <span className="block text-blue-600">簡單便捷的本地商戶平台</span>
+          <span className="block bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
+            專為澳門商戶而設的會員與生意平台
+          </span>
+        </div>
+        <div className="max-w-xl text-base sm:text-lg text-slate-600 leading-relaxed">
+          從會員、儲值、優惠券到線上點餐，把街坊生意搬到手機上，用更低成本做出更專業的數碼體驗。
         </div>
 
         <div className="grid gap-3">
           {slogans.map((s) => (
             <div
               key={s}
-              className="rounded-2xl border border-white/40 bg-white/60 backdrop-blur px-4 py-3 text-gray-800 font-bold"
+              className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 text-slate-800 font-bold shadow-sm backdrop-blur"
             >
               {s}
             </div>
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row gap-3 pt-3">
           <Link
-            href="https://macau-ledger.vercel.app/merchant"
-            className="inline-flex items-center justify-center rounded-2xl bg-blue-600 text-white font-black px-6 py-4 shadow-xl shadow-blue-200 hover:bg-blue-700 transition-colors"
+            href="https://macau-ledger.vercel.app/merchant/login"
+            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 text-white font-black px-6 py-4 shadow-xl shadow-slate-300 hover:bg-slate-900 transition-colors"
           >
             立即使用
             <ArrowRight className="ml-2" size={18} />
           </Link>
           <button
-            onClick={() => document.getElementById("about")?.scrollIntoView({ behavior: "smooth" })}
-            className="inline-flex items-center justify-center rounded-2xl bg-white/70 border border-white/60 text-gray-900 font-black px-6 py-4 hover:bg-white transition-colors"
+            onClick={() => document.getElementById("videos")?.scrollIntoView({ behavior: "smooth" })}
+            className="inline-flex items-center justify-center rounded-2xl bg-white/80 border border-white text-slate-900 font-black px-6 py-4 hover:bg-white transition-colors"
           >
-            了解更多
+            觀看教學
+            <Play className="ml-2" size={18} />
           </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          {metrics.map((item) => (
+            <div key={item.label} className="rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur">
+              <div className="text-base font-black text-slate-950">{item.value}</div>
+              <div className="text-xs text-slate-500 mt-1">{item.label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="space-y-4">
-        <PhoneFrame>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <PhoneFrame className="w-[min(86vw,390px)]">
+          <Image
             src={slide.src}
             alt={slide.title}
-            className="w-full h-[560px] sm:h-[620px] object-contain bg-black"
+            fill
+            sizes="(max-width: 640px) 86vw, 390px"
+            className="object-contain object-top p-2"
           />
         </PhoneFrame>
 
@@ -168,10 +246,17 @@ type Feature = {
   title: string;
   description: string;
   icon: React.ReactNode;
-  media: { src: string; alt: string; link?: string };
+  media: { src: string; alt: string };
 };
 
 const features: Feature[] = [
+  {
+    title: "商戶入口清晰，前線同事易上手",
+    description:
+      "商家入口獨立，登入後即可處理扣點、充值與會員碼掃描，適合前台和店員快速使用。",
+    icon: <QrCode size={18} />,
+    media: { src: "/homepage/screens/macau-ledger-merchant-home.png", alt: "商戶收銀頁" },
+  },
   {
     title: "免費本地平台，讓好店被看見",
     description:
@@ -250,24 +335,15 @@ function StickyFeatureScroll() {
               {current.icon}
             </div>
           </div>
-          {current.media.link && (
-            <Link
-              href={current.media.link}
-              target="_blank"
-              className="mt-4 inline-flex items-center text-sm font-black text-emerald-700 hover:text-emerald-800"
-            >
-              觀看示範影片
-              <Play className="ml-2" size={16} />
-            </Link>
-          )}
         </div>
 
-        <PhoneFrame>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <PhoneFrame className="w-[min(84vw,350px)] sm:w-[330px] lg:w-[360px]">
+          <Image
             src={current.media.src}
             alt={current.media.alt}
-            className="w-full h-[620px] object-contain bg-black"
+            fill
+            sizes="(max-width: 640px) 84vw, 360px"
+            className="object-contain object-top p-2"
           />
         </PhoneFrame>
       </div>
@@ -307,47 +383,72 @@ function StickyFeatureScroll() {
   );
 }
 
+function VideoCard({ item }: { item: VideoItem }) {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-100">
+      <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-slate-950">
+        <div className="aspect-video">
+          <iframe
+            src={`https://www.youtube.com/embed/${item.youtubeId}`}
+            title={item.title}
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+      <div className="pt-4">
+        <div className="text-base font-black text-slate-950">{item.title}</div>
+        <div className="mt-1 text-sm text-slate-600 leading-relaxed">{item.description}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function Homepage() {
   const year = useMemo(() => new Date().getFullYear(), []);
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-0 bg-white text-slate-900">
       <FullBleedSection className="overflow-hidden">
         <div className="relative">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.18),transparent_55%),radial-gradient(circle_at_bottom,rgba(16,185,129,0.15),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.95),rgba(255,255,255,0.85),rgba(255,255,255,1))]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(59,130,246,0.22),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(14,165,233,0.18),transparent_30%),radial-gradient(circle_at_75%_80%,rgba(16,185,129,0.16),transparent_35%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,250,252,0.92),rgba(255,255,255,1))]" />
           <div className="relative">
-            <div className="mx-auto max-w-6xl px-5 sm:px-8 pt-10 pb-14">
-              <header className="flex items-center justify-between">
+            <div className="mx-auto max-w-7xl px-5 sm:px-8 pt-8 pb-18">
+              <header className="flex items-center justify-between rounded-full border border-white/70 bg-white/75 px-4 py-3 shadow-lg shadow-slate-100 backdrop-blur sm:px-6">
                 <Link href="/homepage" className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black shadow-lg shadow-blue-200">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-emerald-500 text-white flex items-center justify-center font-black shadow-lg shadow-blue-200">
                     澳
                   </div>
                   <div className="leading-tight">
-                    <div className="text-base font-black text-gray-900">澳門會員通</div>
-                    <div className="text-xs font-bold text-gray-500">MACAU MEMBERSHIP</div>
+                    <div className="text-base font-black text-slate-950">澳門會員通</div>
+                    <div className="text-xs font-bold text-slate-500">MACAU MEMBERSHIP</div>
                   </div>
                 </Link>
-                <nav className="hidden md:flex items-center gap-6 text-sm font-black text-gray-700">
+                <nav className="hidden md:flex items-center gap-6 text-sm font-black text-slate-700">
                   <button onClick={() => document.getElementById("about")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-blue-700">
                     關於
                   </button>
                   <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-blue-700">
                     功能
                   </button>
+                  <button onClick={() => document.getElementById("videos")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-blue-700">
+                    教學
+                  </button>
                   <button onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })} className="hover:text-blue-700">
                     聯絡
                   </button>
                   <Link
-                    href="https://macau-ledger.vercel.app/merchant"
-                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 text-white px-4 py-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors"
+                    href="https://macau-ledger.vercel.app/merchant/login"
+                    className="inline-flex items-center justify-center rounded-xl bg-slate-950 text-white px-4 py-2 shadow-lg shadow-slate-200 hover:bg-slate-900 transition-colors"
                   >
                     立即使用
                   </Link>
                 </nav>
               </header>
 
-              <div className="mt-10">
+              <div className="mt-10 sm:mt-14">
                 <Slider />
               </div>
             </div>
@@ -356,17 +457,17 @@ export default function Homepage() {
       </FullBleedSection>
 
       <FullBleedSection id="about" className="bg-white">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8 py-14 grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-12 items-start">
           <div className="space-y-5">
-            <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-gray-700 bg-gray-50 border border-gray-200 rounded-full px-4 py-2">
+            <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-slate-700 bg-slate-50 border border-slate-200 rounded-full px-4 py-2">
               <Sparkles size={14} />
               <span>澳門會員通既初心</span>
             </div>
-            <div className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight">
+            <div className="text-3xl sm:text-5xl font-black text-slate-950 leading-tight tracking-tight">
               告別紙本記帳
-              <span className="block text-gray-500">輕鬆管理熟客</span>
+              <span className="block text-slate-500">把熟客、生意與推廣都放進一個平台</span>
             </div>
-            <div className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-4">
+            <div className="text-sm sm:text-lg text-slate-700 leading-relaxed space-y-4 max-w-2xl">
               <p>
                 身為一個做餐飲業既老闆超過 10 年，我睇住澳門由無外賣平台，到有外賣平台，
                 生意由正常運作到非常艱辛。依家大部份人都需要靠平台，但平台把利潤的大頭拿走，
@@ -378,64 +479,118 @@ export default function Homepage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-                <div className="text-sm font-black text-gray-900">免買系統</div>
-                <div className="text-xs text-gray-600 mt-1">永久免費，手機打開就能用</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-sm font-black text-slate-950">免買系統</div>
+                <div className="text-xs text-slate-600 mt-1">永久免費，手機打開就能用</div>
               </div>
-              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-                <div className="text-sm font-black text-gray-900">帳目清晰</div>
-                <div className="text-xs text-gray-600 mt-1">自動記錄儲值與消費</div>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-sm font-black text-slate-950">帳目清晰</div>
+                <div className="text-xs text-slate-600 mt-1">自動記錄儲值與消費</div>
               </div>
-              <div className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-                <div className="text-sm font-black text-gray-900">靈活吸客</div>
-                <div className="text-xs text-gray-600 mt-1">現金券與禮品券推廣</div>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="text-sm font-black text-slate-950">靈活吸客</div>
+                <div className="text-xs text-slate-600 mt-1">現金券與禮品券推廣</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+              <div className="rounded-3xl bg-slate-950 text-white p-6">
+                <div className="flex items-center gap-3">
+                  <Globe2 size={18} />
+                  <div className="text-base font-black">讓好店被看見</div>
+                </div>
+                <div className="mt-2 text-sm text-white/75 leading-relaxed">
+                  免費展示店鋪、菜單、海報與活動，讓街坊更容易找到你的店。
+                </div>
+              </div>
+              <div className="rounded-3xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white p-6">
+                <div className="flex items-center gap-3">
+                  <Gift size={18} />
+                  <div className="text-base font-black">推廣與回購更容易</div>
+                </div>
+                <div className="mt-2 text-sm text-white/85 leading-relaxed">
+                  派券、儲值、點餐、社群引流，商戶與顧客之間的連結更直接。
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <PhoneFrame>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+          <div className="space-y-5">
+            <PhoneFrame className="w-[min(84vw,400px)]">
+              <Image
                 src="/homepage/screens/macau-ledger-favorites.png"
                 alt="我的收藏"
-                className="w-full h-[620px] object-contain bg-black"
+                fill
+                sizes="(max-width: 640px) 84vw, 400px"
+                className="object-contain object-top p-2"
               />
             </PhoneFrame>
 
-            <div className="text-xs text-gray-500 text-center">
-              想睇示範影片？可以參考官方教學：
-              <Link
-                className="ml-1 text-blue-700 font-bold hover:underline"
-                href="https://www.youtube.com/watch?v=U5vdjXtkJjQ"
-                target="_blank"
-              >
-                澳門會員通介紹
-              </Link>
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <div className="text-sm font-black text-slate-950">為澳門商戶而設</div>
+              <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+                不是一個只講功能的系統，而是一個幫你做會員、做推廣、做線上展示、做點餐入口的實用平台。
+              </div>
+              <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 免費入駐</span>
+                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 手機即可用</span>
+                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 本地社群引流</span>
+              </div>
             </div>
           </div>
         </div>
       </FullBleedSection>
 
-      <FullBleedSection id="features" className="bg-gray-50">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8 py-16">
+      <FullBleedSection id="features" className="bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
           <StickyFeatureScroll />
         </div>
       </FullBleedSection>
 
+      <FullBleedSection id="videos" className="bg-white">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center space-x-2 text-xs font-black tracking-widest text-rose-700 bg-rose-50 border border-rose-100 rounded-full px-4 py-2">
+              <Play size={14} />
+              <span>教學片段</span>
+            </div>
+            <div className="mt-4 text-3xl sm:text-5xl font-black text-slate-950 leading-tight tracking-tight">
+              直接睇教學
+              <span className="block text-slate-500">把功能介紹放回真正的使用情境</span>
+            </div>
+            <div className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
+              不只是放一條連結，而是把核心教學直接嵌入官網，讓商戶與用家一打開就能了解平台怎樣用。
+            </div>
+          </div>
+
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {videos.map((video) => (
+              <VideoCard key={video.youtubeId} item={video} />
+            ))}
+          </div>
+        </div>
+      </FullBleedSection>
+
       <FullBleedSection id="contact" className="bg-white">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8 py-16">
-          <div className="rounded-[40px] border border-gray-200 bg-gradient-to-br from-blue-50 via-white to-emerald-50 p-8 sm:p-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center shadow-xl shadow-blue-50">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 py-18">
+          <div className="rounded-[40px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.08),transparent_30%),white] p-8 sm:p-12 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center shadow-2xl shadow-slate-100">
             <div className="space-y-4">
-              <div className="text-2xl sm:text-3xl font-black text-gray-900">加入社群</div>
-              <div className="text-sm sm:text-base text-gray-700 leading-relaxed">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black tracking-widest text-slate-700">
+                <QrCode size={14} />
+                <span>聯絡我們</span>
+              </div>
+              <div className="text-3xl sm:text-5xl font-black text-slate-950 leading-tight">
+                我地嘅社群
+                <span className="block text-slate-500">喺呢度等你加入</span>
+              </div>
+              <div className="text-sm sm:text-lg text-slate-700 leading-relaxed">
                 我地嘅社群喺呢度。歡迎加入微信群，交流使用心得、功能建議，同埋了解最新更新。
               </div>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Link
-                  href="https://macau-ledger.vercel.app/merchant"
-                  className="inline-flex items-center justify-center rounded-2xl bg-gray-900 text-white font-black px-6 py-4 hover:bg-black transition-colors"
+                  href="https://macau-ledger.vercel.app/merchant/login"
+                  className="inline-flex items-center justify-center rounded-2xl bg-slate-950 text-white font-black px-6 py-4 hover:bg-black transition-colors"
                 >
                   立即使用
                   <ArrowRight className="ml-2" size={18} />
@@ -447,24 +602,27 @@ export default function Homepage() {
                   使用教學
                 </Link>
               </div>
-          <div className="text-xs text-gray-500">掃描加入社群，交流使用心得與最新更新。</div>
+              <div className="text-xs text-slate-500">
+                掃描加入社群，交流使用心得與最新更新。
+              </div>
             </div>
 
             <div className="flex items-center justify-center">
-              <div className="rounded-3xl bg-white border border-gray-200 p-6 shadow-lg shadow-gray-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <div className="rounded-[32px] bg-white border border-slate-200 p-6 shadow-xl shadow-slate-100">
+                <Image
                   src="/homepage/wechat-qr.jpg"
                   alt="WeChat 群 QR Code"
+                  width={280}
+                  height={280}
                   className="w-[240px] h-[240px]"
                 />
-                <div className="mt-4 text-center text-sm font-black text-gray-900">WeChat 群</div>
-                <div className="text-center text-xs text-gray-500">掃描加入社群</div>
+                <div className="mt-4 text-center text-sm font-black text-slate-950">WeChat 群</div>
+                <div className="text-center text-xs text-slate-500">掃描加入社群</div>
               </div>
             </div>
           </div>
 
-          <footer className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+          <footer className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
             <div>© {year} 澳門會員通 · All rights reserved.</div>
             <div className="flex items-center gap-4">
               <Link href="https://macau-ledger.vercel.app/about/merchant" className="hover:underline" target="_blank">
