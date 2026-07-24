@@ -75,14 +75,14 @@ const slides: Slide[] = [
 
 const slogans = [
   "澳門會員通，中小企數碼化的第一步。",
-  "免費入駐，輕鬆開店，生意轉型零負擔。",
-  "澳門人自己的會員系統，撐起澳門中小企。",
+  "免佣金、不抽成，做返自己生意的主場。",
+  "把客人沉澱成自己的私域，儲值與優惠券帶動回購。",
 ];
 
 const metrics = [
-  { value: "免費", label: "永久免費入駐" },
-  { value: "本地", label: "為澳門商戶而設" },
-  { value: "一站式", label: "會員、點餐、優惠整合" },
+  { value: "免佣金", label: "不抽成，客單收益更完整" },
+  { value: "私域", label: "把客人沉澱成自己的資產" },
+  { value: "高回購", label: "儲值 + 優惠券帶動再消費" },
   { value: "不經手現金", label: "平台只做記錄與對接" },
 ];
 
@@ -204,7 +204,7 @@ function Slider() {
       <div className="space-y-4">
         <div className="inline-flex items-center space-x-2 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-xs font-black tracking-widest text-rose-700 shadow-sm backdrop-blur">
           <Sparkles size={14} />
-          <span>免費入駐 · 澳門本地平台</span>
+          <span>免佣金 · 私域客人 · 提升回購</span>
         </div>
         <div className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 leading-[1.05] tracking-tight">
           澳門會員通
@@ -213,7 +213,7 @@ function Slider() {
           </span>
         </div>
         <div className="max-w-xl text-base sm:text-lg text-slate-600 leading-relaxed">
-          從會員、儲值、優惠券到線上點餐，把街坊生意搬到手機上，用更低成本做出更專業的數碼體驗。
+          免佣金、不抽成，把街坊客變成你自己的私域客人；再用儲值、優惠券與會員機制，提升回購率與客單價。
         </div>
 
         <div className="grid gap-3">
@@ -631,23 +631,23 @@ export default function Homepage() {
                 沒有推廣就沒有流量，沒有流量就沒有客人。
               </p>
               <p>
-                所以我地整左依個平台，從商家既角度出發，改變依賴各大平台的習慣，把自己各自的私域打理好。
-                我地會無條件為澳門中小企業主去打造一個良好、免費的平台。
+                所以我地整左依個平台，從商家既角度出發，改變依賴各大平台的習慣，把客人沉澱成自己各自的私域資產。
+                我地會無條件為澳門中小企業主去打造一個良好、免費、免佣金的平台。
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <div className="text-sm font-black text-slate-950">免買系統</div>
-                <div className="text-xs text-slate-600 mt-1">永久免費，手機打開就能用</div>
+                <div className="text-sm font-black text-slate-950">免佣金</div>
+                <div className="text-xs text-slate-600 mt-1">不抽成，收益更完整</div>
               </div>
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <div className="text-sm font-black text-slate-950">帳目清晰</div>
-                <div className="text-xs text-slate-600 mt-1">自動記錄儲值與消費</div>
+                <div className="text-sm font-black text-slate-950">私域客人</div>
+                <div className="text-xs text-slate-600 mt-1">熟客沉澱喺自己手上</div>
               </div>
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <div className="text-sm font-black text-slate-950">靈活吸客</div>
-                <div className="text-xs text-slate-600 mt-1">現金券與禮品券推廣</div>
+                <div className="text-sm font-black text-slate-950">提升回購</div>
+                <div className="text-xs text-slate-600 mt-1">儲值與優惠券帶動再消費</div>
               </div>
             </div>
 
@@ -667,7 +667,7 @@ export default function Homepage() {
                   <div className="text-base font-black">推廣與回購更容易</div>
                 </div>
                 <div className="mt-2 text-sm text-white/85 leading-relaxed">
-                  派券、儲值、點餐、社群引流，商戶與顧客之間的連結更直接。
+                  派券、儲值、點餐、社群引流一齊運作，幫你提升回購率，把客人慢慢變成自己私域。
                 </div>
               </div>
             </div>
@@ -690,9 +690,9 @@ export default function Homepage() {
                 不是一個只講功能的系統，而是一個幫你做會員、做推廣、做線上展示、做點餐入口的實用平台。
               </div>
               <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 免費入駐</span>
-                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 手機即可用</span>
-                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 本地社群引流</span>
+                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 免佣金</span>
+                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 私域客人沉澱</span>
+                <span className="inline-flex items-center gap-1"><CheckCircle2 size={14} /> 儲值提升回購</span>
               </div>
             </div>
           </div>
