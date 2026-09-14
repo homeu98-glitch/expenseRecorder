@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>澳門會員通 · 方案與定價（確認稿 v1）</title>
+<style>
+:root{
+  --blue:#2563eb;--blue-d:#1d4ed8;--cyan:#06b6d4;--emerald:#10b981;--emerald-d:#047857;
+  --rose:#e11d48;--orange:#f97316;--amber:#f59e0b;--amber-l:#fef3c7;
+  --violet:#7c3aed;--violet-l:#ede9fe;--indigo:#4f46e5;--indigo-l:#e0e7ff;
+  --ink:#0f172a;--ink2:#1e293b;--slate:#64748b;--mute:#94a3b8;
+  --line:#e2e8f0;--soft:#f8fafc;--soft2:#f1f5f9;
+  --cta:linear-gradient(90deg,#e11d48,#f97316,#f59e0b);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#e8edf4;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+  color:var(--ink);-webkit-font-smoothing:antialiased;padding:0 0 40px;
+}
+
+/* ── 評審工具列（唔屬產品介面・非 sticky） ───── */
+.reviewbar{
+  background:#0f172a;color:#e2e8f0;padding:12px 20px;display:flex;align-items:center;gap:14px;
+  position:relative;z-index:1;font-size:13px;flex-wrap:wrap;
+}
+.reviewbar b{color:#fbbf24;font-size:13px;letter-spacing:.04em}
+.reviewbar .rb-tag{
+  display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:4px 12px;font-weight:700;
+}
+.reviewbar .rb-note{color:#94a3b8;font-size:12px}
+
+/* ── 固定畫布 ───────────────────────────────── */
+.stage{max-width:1280px;margin:0 auto;position:relative;overflow:hidden}
+.canvas{width:1280px;transform-origin:top left;background:#fff;box-shadow:0 24px 80px rgba(15,23,42,.16)}
+.wrap{width:1180px;margin:0 auto}
+section{border-bottom:1px solid var(--line)}
+.sec-pad{padding:72px 0}
+
+/* ── 通用 ───────────────────────────────────── */
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:900;letter-spacing:.14em;
+  border-radius:999px;padding:8px 16px;border:1px solid var(--line);background:var(--soft);color:var(--slate);
+}
+.h2{font-size:38px;font-weight:900;letter-spacing:-.02em;line-height:1.2}
+.h3{font-size:17px;font-weight:900;line-height:1.4}
+.lead{font-size:16.5px;color:var(--slate);line-height:1.78}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:16px;
+  font-weight:900;font-size:15px;padding:15px 26px;border:0;cursor:pointer;text-decoration:none;
+}
+.btn-cta{background:var(--cta);color:#fff;box-shadow:0 12px 28px rgba(225,29,72,.28)}
+.btn-blue{background:var(--blue);color:#fff;box-shadow:0 12px 28px rgba(37,99,235,.24)}
+.btn-white{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn-line{background:#fff;color:var(--blue);border:1.5px solid #bfdbfe}
+.btn-sm{padding:12px 20px;font-size:14px;border-radius:14px}
+.ico{
+  width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;
+  font-size:24px;line-height:1;border:1px solid var(--line);background:var(--soft);flex:none;
+}
+.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px}
+.anno{
+  margin-top:16px;background:#fffbeb;border:1px dashed #fcd34d;border-radius:14px;padding:12px 15px;
+  font-size:12.5px;color:#92400e;line-height:1.65;
+}
+.anno b{color:#78350f}
+
+/* ── NAV ────────────────────────────────────── */
+.nav{background:rgba(255,255,255,.92);border-bottom:1px solid var(--line)}
+.nav-in{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:22px;align-items:center;padding:14px 0}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.brand-mark{
+  width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,var(--blue),var(--emerald));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;
+}
+.brand-t{font-size:17px;font-weight:900;line-height:1.15;display:block}
+.brand-s{font-size:10px;font-weight:800;color:var(--mute);letter-spacing:.16em;display:block}
+.navmenu{display:flex;align-items:center;gap:24px;font-size:14px;font-weight:900;color:#334155;justify-content:center}
+.navmenu a{color:inherit;text-decoration:none}
+
+/* ── HERO ───────────────────────────────────── */
+.hero{background:
+  radial-gradient(circle at 16% 10%,rgba(37,99,235,.15),transparent 34%),
+  radial-gradient(circle at 82% 18%,rgba(6,182,212,.13),transparent 32%),
+  radial-gradient(circle at 76% 90%,rgba(16,185,129,.13),transparent 34%),
+  linear-gradient(180deg,#fbfdff,#f2f7fd);}
+.hero-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:52px;align-items:center;padding:58px 0 64px}
+.hero h1{font-size:52px;font-weight:900;line-height:1.1;letter-spacing:-.03em;margin-top:20px}
+.hero h1 em{
+  font-style:normal;display:block;
+  background:linear-gradient(90deg,var(--blue),var(--cyan),var(--emerald));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero-lead{margin-top:16px;font-size:16.5px;line-height:1.8;color:#475569;max-width:560px}
+.hero-cta{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:28px}
+.metric{background:rgba(255,255,255,.85);border:1px solid #fff;border-radius:16px;padding:15px;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+.metric b{display:block;font-size:15px;font-weight:900}
+.metric span{display:block;font-size:11.5px;color:var(--slate);margin-top:4px;line-height:1.5}
+
+/* hero 右側價格速覽 */
+.price-peek{background:#fff;border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:0 24px 60px rgba(15,23,42,.1)}
+.price-peek .pp-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.price-peek .pp-hd b{font-size:15px;font-weight:900}
+.pp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 0;border-bottom:1px dashed var(--line)}
+.pp-row:last-of-type{border-bottom:0}
+.pp-row b{font-size:14px;font-weight:900;display:block}
+.pp-row i{font-size:11.5px;color:var(--mute);font-style:normal}
+.pp-row u{font-size:17px;font-weight:900;color:var(--blue);text-decoration:none}
+.pp-row u.free{color:var(--emerald)}
+.pp-foot{margin-top:14px;background:var(--soft);border-radius:14px;padding:12px 14px;font-size:12px;color:var(--slate);line-height:1.6}
+.pp-foot b{color:var(--ink)}
+
+/* ── 卡片網格 ───────────────────────────────── */
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.card-h{display:flex;flex-direction:column;height:100%}
+.card-h .h3{margin-top:16px}
+.card-h p{margin-top:8px;font-size:13.5px;color:var(--slate);line-height:1.7}
+
+/* ── 打印 ───────────────────────────────────── */
+.print-sec{background:#fff}
+.pr-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:30px}
+.pr-card{border:1px solid var(--line);border-radius:22px;padding:24px;display:flex;flex-direction:column;height:100%}
+.pr-card .h3{margin-top:16px}
+.pr-card p{margin-top:8px;font-size:13.5px;color:var(--slate);line-height:1.7}
+.pr-badge{
+  align-self:flex-start;margin-top:14px;font-size:11.5px;font-weight:900;border-radius:999px;padding:5px 12px;
+  background:var(--emerald-l);color:var(--emerald-d);border:1px solid #a7f3d0;
+}
+.pr-badge.opt{background:var(--amber-l);color:#92400e;border-color:#fcd34d}
+.callout{
+  margin-top:26px;background:linear-gradient(90deg,#f0fdf4,#ecfeff);border:1px solid #bbf7d0;
+  border-radius:22px;padding:24px 28px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;
+}
+.callout b{font-size:16.5px;font-weight:900;display:block}
+.callout span{display:block;font-size:14px;color:#475569;margin-top:8px;line-height:1.72}
+.callout-quote{
+  background:#fff;border:1px solid #bbf7d0;border-radius:16px;padding:16px 20px;font-size:14px;
+  font-weight:900;color:var(--emerald-d);white-space:nowrap;
+}
+
+/* ── 硬件 ───────────────────────────────────── */
+.hw{background:linear-gradient(180deg,#f8fafc,#fff)}
+.hw-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:30px}
+.hw-card{border:1px solid var(--line);border-radius:20px;padding:22px;background:#fff;display:flex;flex-direction:column;height:100%}
+.hw-card .ico{background:#eef2ff;border-color:var(--indigo-l)}
+.hw-card b{display:block;font-size:15.5px;font-weight:900;margin-top:14px}
+.hw-card span{display:block;font-size:13px;color:var(--slate);margin-top:7px;line-height:1.65}
+.hw-strip{
+  margin-top:24px;border:1px solid var(--indigo-l);background:#eef2ff;border-radius:20px;padding:20px 26px;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;
+}
+.hw-strip b{font-size:16px;font-weight:900;display:block}
+.hw-strip span{display:block;font-size:13.5px;color:#475569;margin-top:7px;line-height:1.7}
+
+/* ── 定價 ───────────────────────────────────── */
+.pricing{background:linear-gradient(180deg,#f8fafc,#fff)}
+.plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:32px;align-items:stretch}
+.plan{
+  border:1.5px solid var(--line);border-radius:24px;padding:26px 22px;background:#fff;
+  display:flex;flex-direction:column;height:100%;position:relative;
+}
+.plan.hot{border-color:var(--rose);box-shadow:0 20px 50px rgba(225,29,72,.14)}
+.plan-tag{
+  position:absolute;top:-12px;left:22px;background:var(--cta);color:#fff;font-size:11px;font-weight:900;
+  border-radius:999px;padding:5px 13px;letter-spacing:.06em;
+}
+.plan-name{font-size:15px;font-weight:900;letter-spacing:.01em}
+.plan-sub{font-size:12px;color:var(--mute);margin-top:5px;line-height:1.55;min-height:34px}
+.plan-price{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:6px}
+.plan-price b{font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1}
+.plan-price u{font-size:14px;font-weight:900;text-decoration:none;color:var(--slate)}
+.plan-price.free b{color:var(--emerald)}
+.plan-note{font-size:11.5px;color:var(--mute);margin-top:6px}
+.plan-list{display:grid;gap:9px;margin-top:18px}
+.plan-li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:9px;font-size:13px;color:#334155;line-height:1.6}
+.plan-li em{color:var(--emerald);font-style:normal;font-weight:900}
+.plan-li.off{color:var(--mute)}
+.plan-li.off em{color:#cbd5e1}
+.plan-cta{margin-top:auto;padding-top:20px}
+.plan-cta .btn{width:100%}
+.why{
+  margin-top:28px;background:#0f172a;border-radius:24px;padding:32px 36px;color:#fff;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:36px;align-items:center;
+}
+.why h3{font-size:24px;font-weight:900;line-height:1.35}
+.why p{margin-top:12px;font-size:14.5px;color:#cbd5e1;line-height:1.8}
+.why-cmp{display:grid;gap:12px}
+.why-box{border-radius:16px;padding:16px 18px;font-size:13.5px;line-height:1.6}
+.why-box.bad{background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.28);color:#fecdd3}
+.why-box.good{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#6ee7b7}
+.why-box b{display:block;font-size:12px;letter-spacing:.1em;margin-bottom:6px;opacity:.85}
+
+/* ── 金流 ───────────────────────────────────── */
+.pay{background:#fff}
+.pay-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:30px}
+.pay-card{border:1px solid var(--line);border-radius:22px;padding:28px;display:flex;flex-direction:column;height:100%}
+.pay-card.now{border-color:#a7f3d0;background:linear-gradient(180deg,#f0fdf4,#fff)}
+.pay-card.soon{border-color:var(--indigo-l);background:linear-gradient(180deg,#eef2ff,#fff)}
+.pay-state{
+  align-self:flex-start;font-size:11.5px;font-weight:900;border-radius:999px;padding:5px 13px;letter-spacing:.08em;
+}
+.pay-card.now .pay-state{background:var(--emerald-l);color:var(--emerald-d)}
+.pay-card.soon .pay-state{background:var(--indigo-l);color:var(--indigo)}
+.pay-card h3{font-size:22px;font-weight:900;margin-top:16px;line-height:1.4}
+.pay-card p{margin-top:10px;font-size:14px;color:var(--slate);line-height:1.78}
+.pay-list{display:grid;gap:10px;margin-top:18px}
+.pay-li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;font-size:13.5px;line-height:1.65;color:#334155}
+.pay-li em{font-style:normal;font-weight:900;color:var(--emerald)}
+.pay-card.soon .pay-li em{color:var(--indigo)}
+
+/* ── FAQ ────────────────────────────────────── */
+.faq{background:linear-gradient(180deg,#f8fafc,#fff)}
+.faq-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:30px}
+.faq-card{border:1px solid var(--line);border-radius:20px;padding:24px;background:#fff;display:flex;flex-direction:column;height:100%}
+.faq-q{display:grid;grid-template-columns:26px minmax(0,1fr);gap:11px;align-items:start}
+.faq-q span{
+  width:26px;height:26px;border-radius:999px;background:var(--ink);color:#fff;display:flex;
+  align-items:center;justify-content:center;font-size:12px;font-weight:900;flex:none;
+}
+.faq-q b{font-size:15.5px;font-weight:900;line-height:1.5}
+.faq-card p{margin-top:12px;font-size:13.5px;color:var(--slate);line-height:1.78}
+
+/* ── CTA / FOOTER ───────────────────────────── */
+.cta-sec{background:#fff}
+.cta-box{
+  border:1px solid var(--line);border-radius:34px;padding:46px;
+  background:radial-gradient(circle at 12% 10%,rgba(37,99,235,.08),transparent 32%),
+             radial-gradient(circle at 88% 86%,rgba(16,185,129,.08),transparent 32%),#fff;
+  box-shadow:0 26px 70px rgba(15,23,42,.08);text-align:center;
+}
+.cta-box .h2{margin-top:16px}
+.cta-box p{margin:16px auto 0;max-width:660px}
+.cta-row{display:flex;gap:12px;justify-content:center;margin-top:28px;flex-wrap:wrap}
+.cta-hint{margin-top:20px;font-size:13px;color:var(--mute)}
+footer{background:#0f172a;color:#94a3b8}
+.foot-in{padding:32px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center}
+.foot-brand{display:flex;align-items:center;gap:12px}
+.foot-brand b{color:#fff;font-size:15px;font-weight:900;display:block}
+.foot-brand span{font-size:11px;letter-spacing:.14em;color:#64748b}
+.foot-links{display:flex;gap:22px;font-size:13px;font-weight:800}
+.foot-links a{color:#cbd5e1;text-decoration:none}
+.foot-bottom{border-top:1px solid rgba(255,255,255,.08)}
+.foot-bottom-in{padding:16px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;font-size:12px;color:#64748b}
+</style>
+</head>
+<body>
+
+<!-- ═══ 評審工具列（唔屬產品介面） ═══ -->
+<div class="reviewbar">
+  <b>方案與定價頁 · 確認稿 v1 · 2026-09-14</b>
+  <span class="rb-tag">桌面版 1280px 固定畫布</span>
+  <span class="rb-tag">首月試用 · 按月收費</span>
+  <span class="rb-tag">4 個方案</span>
+  <span class="rb-note">※ 深色列唔屬產品介面。黃色虛線框為設計註解，實作時刪除。</span>
+</div>
+
+<div class="stage" id="stage">
+<div class="canvas" id="canvas">
+
+  <!-- ── NAV ─────────────────────────────── -->
+  <div class="nav">
+    <div class="wrap">
+      <div class="nav-in">
+        <a class="brand" href="#top">
+          <span class="brand-mark">澳</span>
+          <span>
+            <span class="brand-t">澳門會員通</span>
+            <span class="brand-s">MACAU MEMBERSHIP</span>
+          </span>
+        </a>
+        <nav class="navmenu">
+          <a href="#printing">打印</a>
+          <a href="#hardware">硬件</a>
+          <a href="#pricing">方案與定價</a>
+          <a href="#payments">金流</a>
+          <a href="#faq">常見問題</a>
+        </nav>
+        <a class="btn btn-cta btn-sm" href="#pricing">免費試用一個月</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HERO ────────────────────────────── -->
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="hero-in">
+        <div>
+          <span class="eyebrow">首月試用 · 按月收費 · 免佣金</span>
+          <h1>先試一個月<em>啱使先俾錢</em></h1>
+          <p class="hero-lead">
+            澳門會員通 App（Ledger）本身<b>免月費、免佣金</b>，永久免費。
+            要埋收銀、後廚屏呢啲工具，就按你需要逐項加，月費固定、可以預算。
+            你而家用開嘅打印機、平板、收銀電腦照用得，唔使為咗換系統再買一套硬件。
+          </p>
+
+          <div class="hero-cta">
+            <a class="btn btn-cta" href="#pricing">睇方案同價錢 →</a>
+            <a class="btn btn-white" href="#printing">我而用嘅打印機用得嗎？</a>
+          </div>
+
+          <div class="metrics">
+            <div class="metric"><b>Ledger 免月費</b><span>會員通 App 永久免費</span></div>
+            <div class="metric"><b>POS 首月試用</b><span>試完啱使先開始俾</span></div>
+            <div class="metric"><b>沿用現有硬件</b><span>Web / Android / PC 三個版本</span></div>
+          </div>
+
+          <div class="anno">
+            <b>註解（Hero）</b>：主標用「先試一個月，啱使先俾錢」直接回答商家最關心嘅問題。
+            口徑澄清：「<b>免月費</b>」係指<b>只用 Ledger 會員通 App</b> 嘅情況（依然永久免費）；
+            收銀／後廚屏／手機點餐先按月收費。所以由 Hero 開始就要分清「免費嗰個」同「收費嗰個」，
+            唔可以俾商家誤會全部免費。
+          </div>
+        </div>
+
+        <div class="price-peek">
+          <div class="pp-hd">
+            <b>價錢一眼睇</b>
+            <span class="rb-tag" style="background:var(--soft);border:1px solid var(--line);color:var(--slate)">MOP / 月</span>
+          </div>
+
+          <div class="pp-row">
+            <span><b>只用 Ledger 會員通</b><i>會員、儲值、優惠券、線上落單</i></span>
+            <u class="free">免費</u>
+          </div>
+          <div class="pp-row">
+            <span><b>macau-pos + ledger</b><i>整套收銀：桌台、餐牌、廚房打印、報表</i></span>
+            <u>248</u>
+          </div>
+          <div class="pp-row">
+            <span><b>＋ KDS 後廚屏</b><i>加後廚屏同出餐屏</i></span>
+            <u>348</u>
+          </div>
+          <div class="pp-row">
+            <span><b>＋ 手機點餐</b><i>客人掃碼自己落單</i></span>
+            <u>398</u>
+          </div>
+
+          <div class="pp-foot">
+            <b>首月試用期</b>，之後按月收費，冇綁約、冇最低消費。唔用就停。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 1. 打印 ─────────────────────────── -->
+  <section class="print-sec sec-pad" id="printing">
+    <div class="wrap">
+      <span class="eyebrow">🖨️ 打印功能</span>
+      <div class="h2" style="margin-top:14px">你而家用開嘅廚房打印機，照用得</div>
+      <p class="lead" style="margin-top:14px;max-width:780px">
+        我哋最常收到嘅問題係「你哋有冇廚房打印？」——<b>有，而且係標準配備</b>。
+        廚房單、標籤、後廚屏三種出單方式我哋都支援，你用開邊種就揀邊種。
+      </p>
+
+      <div class="pr-grid">
+        <div class="pr-card">
+          <div class="ico">🧾</div>
+          <div class="h3">廚房單打印</div>
+          <p>菜品綁定打印分區，廚房出廚房單、水吧出水吧單，同一張單分開出，同你而家做法完全一樣。</p>
+          <span class="pr-badge">標準配備</span>
+        </div>
+        <div class="pr-card">
+          <div class="ico">🏷️</div>
+          <div class="h3">標籤打印</div>
+          <p>飲品杯貼、外賣包裝標籤，可按分區設定出唔出、出幾多張，唔使另外再買一套標籤系統。</p>
+          <span class="pr-badge">標準配備</span>
+        </div>
+        <div class="pr-card">
+          <div class="ico">🖥️</div>
+          <div class="h3">KDS 後廚屏</div>
+          <p>想升級就加一部 iPad 掛後廚，睇單、點掉單品、確認出餐。廚房打印照樣可以並存，唔會二選一。</p>
+          <span class="pr-badge opt">選配・+100／月</span>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div>
+          <b>KDS 唔係必須，我哋唔會逼你買</b>
+          <span>
+            澳門大部份餐廳都係用廚房打印單——廚房位窄、單量唔算大，印出嚟掛喺爐邊最實際。
+            小店幾張枱，廚房打印已經完全夠用。KDS 係留俾單量大、想減少紙張、或者想睇住出餐時間嘅店。
+            你需要先加，唔需要就唔加，價錢都反映咗呢點。
+          </span>
+        </div>
+        <div class="callout-quote">廚房打印 = 標準<br>KDS = 有需要先加</div>
+      </div>
+
+      <div class="anno">
+        <b>註解（打印）</b>：呢區係文案重點之一。商家普遍<b>唔知道</b>我哋有廚房打印，所以要開門見山講「有，而且係標準配備」，
+        並主動講明 KDS 唔係必須——反而更容易建立信任，同時解釋咗點解 KDS 要另外加錢。
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 2. 硬件 ─────────────────────────── -->
+  <section class="hw sec-pad" id="hardware">
+    <div class="wrap">
+      <span class="eyebrow" style="background:#eef2ff;border-color:var(--indigo-l);color:var(--indigo)">💻 硬件兼容</span>
+      <div class="h2" style="margin-top:14px">唔使買新機，沿用你現有設備</div>
+      <p class="lead" style="margin-top:14px;max-width:780px">
+        我哋同時提供 <b>Web、Android 同 PC</b> 三個版本，你手上嘅打印機、平板、收銀電腦，九成都可以直接照用。
+        換系統最貴嘅唔係月費，係換硬件——呢一筆我哋幫你省返。
+      </p>
+
+      <div class="hw-grid">
+        <div class="hw-card">
+          <div class="ico">🌐</div>
+          <b>Web 版</b>
+          <span>用瀏覽器開就用得，唔使安裝。任何電腦、平板、甚至手機都入得收銀台。</span>
+        </div>
+        <div class="hw-card">
+          <div class="ico">🤖</div>
+          <b>Android 版</b>
+          <span>平板或手機安裝即用，可安裝成 App 放喺櫃檯，開機直接入收銀畫面。</span>
+        </div>
+        <div class="hw-card">
+          <div class="ico">🖥️</div>
+          <b>PC 版</b>
+          <span>桌面電腦收銀，配合你原有嘅收銀機同鍵盤，前線同事唔使重新學。</span>
+        </div>
+        <div class="hw-card">
+          <div class="ico">🔌</div>
+          <b>打印機兼容</b>
+          <span>USB 打印機、LAN 網絡打印機、標籤機都支援，直接叫你現有嗰部。</span>
+        </div>
+      </div>
+
+      <div class="hw-strip">
+        <div>
+          <b>換系統唔應該等於換硬件</b>
+          <span>
+            好多商家唔敢換系統，就係怕要重新買一套機。我哋三個版本行同一套資料，
+            你用開嘅設備繼續用，唔夠用先逐步加，慳返嘅錢已經夠交成年月費。
+          </span>
+        </div>
+        <a class="btn btn-blue" href="#pricing">睇方案 →</a>
+      </div>
+
+      <div class="anno">
+        <b>註解（硬件）</b>：商家決策第一考量係「省錢」，所以呢區唔講技術規格，
+        只講「唔使再買機」。三個版本（Web／Android／PC）正好回應「我部機用唔用得」嘅疑問。
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3. 定價 ─────────────────────────── -->
+  <section class="pricing sec-pad" id="pricing">
+    <div class="wrap">
+      <span class="eyebrow">💰 方案與定價</span>
+      <div class="h2" style="margin-top:14px">按你需要揀，唔使為用唔到嘅功能俾錢</div>
+      <p class="lead" style="margin-top:14px;max-width:800px">
+        <b>澳門會員通 App（Ledger）免月費、免佣金，永久免費</b>。需要收銀就加 POS，
+        需要後廚屏再加 KDS，需要客人自己落單再加手機點餐——逐項按你要嘅加。
+        收費嘅方案首月試用期，之後按月收。冇綁約、冇最低消費，唔用就停。
+      </p>
+
+      <div class="plans">
+        <!-- 方案 1 -->
+        <div class="plan">
+          <div class="plan-name">只用 Ledger</div>
+          <div class="plan-sub">會員通 App，免月費・免佣金</div>
+          <div class="plan-price free"><b>免費</b></div>
+          <div class="plan-note">永久免費</div>
+          <div class="plan-list">
+            <div class="plan-li"><em>✓</em>會員儲值與餘額</div>
+            <div class="plan-li"><em>✓</em>現金券、禮品券、生日禮遇</div>
+            <div class="plan-li"><em>✓</em>線上點餐入口、店鋪展示頁</div>
+            <div class="plan-li"><em>✓</em>線上訂單接收（App／Web）</div>
+            <div class="plan-li off"><em>✗</em>店內收銀台</div>
+            <div class="plan-li off"><em>✗</em>廚房打印</div>
+          </div>
+          <div class="plan-cta"><a class="btn btn-line" href="#top">免費開始</a></div>
+        </div>
+
+        <!-- 方案 2（最多人揀） -->
+        <div class="plan hot">
+          <span class="plan-tag">最多人揀</span>
+          <div class="plan-name">macau-pos + ledger</div>
+          <div class="plan-sub">收銀、打印、會員、報表全套</div>
+          <div class="plan-price"><b>248</b><u>MOP／月</u></div>
+          <div class="plan-note">首月試用，之後按月收費</div>
+          <div class="plan-list">
+            <div class="plan-li"><em>✓</em>包含「只用 Ledger」全部功能</div>
+            <div class="plan-li"><em>✓</em>堂食／快餐收銀台、桌台總覽</div>
+            <div class="plan-li"><em>✓</em>餐牌管理、規格、常用備註</div>
+            <div class="plan-li"><em>✓</em>廚房單 + 標籤打印、打印分區</div>
+            <div class="plan-li"><em>✓</em>營業報表、班次交接、沽清</div>
+            <div class="plan-li"><em>✓</em>離線照收，復網自動補傳</div>
+          </div>
+          <div class="plan-cta"><a class="btn btn-cta" href="#top">免費試一個月</a></div>
+        </div>
+
+        <!-- 方案 3 -->
+        <div class="plan">
+          <div class="plan-name">＋ KDS 後廚屏</div>
+          <div class="plan-sub">後廚屏 + 出餐屏，取代紙單</div>
+          <div class="plan-price"><b>348</b><u>MOP／月</u></div>
+          <div class="plan-note">首月試用，之後按月收費</div>
+          <div class="plan-list">
+            <div class="plan-li"><em>✓</em>包含「macau-pos + ledger」全部功能</div>
+            <div class="plan-li"><em>✓</em>後廚屏：睇單、點掉單品</div>
+            <div class="plan-li"><em>✓</em>出餐屏：確認出餐、召回</div>
+            <div class="plan-li"><em>✓</em>按分區自動分流（廚房／水吧）</div>
+            <div class="plan-li"><em>✓</em>廚房打印照樣並存，唔會二選一</div>
+            <div class="plan-li off"><em>✗</em>客人掃碼點餐</div>
+          </div>
+          <div class="plan-cta"><a class="btn btn-line" href="#top">免費試一個月</a></div>
+        </div>
+
+        <!-- 方案 4 -->
+        <div class="plan">
+          <div class="plan-name">＋ 手機點餐</div>
+          <div class="plan-sub">客人掃碼自己落單，全套最齊</div>
+          <div class="plan-price"><b>398</b><u>MOP／月</u></div>
+          <div class="plan-note">首月試用，之後按月收費</div>
+          <div class="plan-list">
+            <div class="plan-li"><em>✓</em>包含「＋ KDS 後廚屏」全部功能</div>
+            <div class="plan-li"><em>✓</em>客人掃枱上 QR 自己落單</div>
+            <div class="plan-li"><em>✓</em>堂食綁枱號，同枱加單自動合併</div>
+            <div class="plan-li"><em>✓</em>快餐模式：全店一個碼、出取餐號</div>
+            <div class="plan-li"><em>✓</em>落單即入廚房同收銀，前台唔使抄單</div>
+            <div class="plan-li"><em>✓</em>QR 固定唔換碼，自己列印貼出</div>
+          </div>
+          <div class="plan-cta"><a class="btn btn-line" href="#top">免費試一個月</a></div>
+        </div>
+      </div>
+
+      <div class="why">
+        <div>
+          <h3>點解係固定月費，而唔係抽佣金？</h3>
+          <p>
+            外賣平台一般抽 20-30%。你生意越好，俾得越多，而且冇上限——做十萬生意，三萬就係平台嘅。
+            我哋唔抽成：月費固定，做三萬做三十萬都係嗰個價。生意做大咗，成本唔會跟住升。
+            對小店嚟講，固定成本先係可以計劃嘅成本。
+          </p>
+        </div>
+        <div class="why-cmp">
+          <div class="why-box bad">
+            <b>抽佣平台</b>營業額越高 → 抽得越多，冇上限。推廣要另外俾錢，唔俾就冇流量。
+          </div>
+          <div class="why-box good">
+            <b>澳門會員通</b>固定月費，唔抽成。客人係你自己嘅，唔會因為唔俾推廣費就消失。
+          </div>
+        </div>
+      </div>
+
+      <div class="anno">
+        <b>註解（定價）</b>：<b>⚠️ 要你確認一點</b>——「首月試用期」我當係<b>首月免費</b>，
+        如果係試用價（例如半價）就要改文案。
+        另外「<b>免月費</b>」只適用於方案 1（只用 Ledger 會員通 App）；方案 2-4 都係月費制。
+        官網其他位置寫「免月費」時要加限定語（例如「會員通 App 免月費」），避免商家誤會全部免費。
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. 金流 ─────────────────────────── -->
+  <section class="pay sec-pad" id="payments">
+    <div class="wrap">
+      <span class="eyebrow" style="background:#f0fdf4;border-color:var(--emerald-l);color:var(--emerald-d)">💳 金流規劃</span>
+      <div class="h2" style="margin-top:14px">而家零手續費，將來對接金流更方便</div>
+      <p class="lead" style="margin-top:14px;max-width:800px">
+        對接金流係好事，但每一筆交易都會產生手續費。所以我哋刻意分成兩步：
+        先用最低成本嘅方式幫你做生意，等你覺得系統啱使，再開啟金流都唔遲。
+      </p>
+
+      <div class="pay-grid">
+        <div class="pay-card now">
+          <span class="pay-state">現階段</span>
+          <h3>完全唔經手任何金錢</h3>
+          <p>
+            現金、轉帳、你現有嘅收款方式繼續照用，我哋只負責記錄同對帳。
+            因為唔經手錢，所以冇交易手續費、冇第三方抽成，你嘅成本係最低。
+          </p>
+          <div class="pay-list">
+            <div class="pay-li"><em>✓</em>零交易手續費，做幾多單都唔加錢</div>
+            <div class="pay-li"><em>✓</em>唔需要開新商戶戶口、唔需要重新對接銀行</div>
+            <div class="pay-li"><em>✓</em>收款方式完全由你話事</div>
+            <div class="pay-li"><em>✓</em>會員餘額扣點照做，只係記帳，唔涉資金流</div>
+          </div>
+        </div>
+
+        <div class="pay-card soon">
+          <span class="pay-state">即將推出</span>
+          <h3>對接金流，客人直接落單付款</h3>
+          <p>
+            我哋會推出金流對接：客人喺手機直接落單付款、網上充值，唔使再線下轉帳、
+            唔使等店員確認入帳。啱晒做外賣、做預付、做活動期大量充值嘅店。
+          </p>
+          <div class="pay-list">
+            <div class="pay-li"><em>✓</em>客人手機直接付款，落單即完成</div>
+            <div class="pay-li"><em>✓</em>網上充值自動入帳，唔使逐筆人手批核</div>
+            <div class="pay-li"><em>✓</em>活動期大量充值唔會塞住櫃檯</div>
+            <div class="pay-li"><em>✓</em>開啟與否由你決定，唔開就繼續零手續費</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="anno">
+        <b>註解（金流）</b>：呢區嘅關鍵係<b>唔可以講成「我哋冇金流」</b>，要講成
+        「現階段唔經手 = 幫你省手續費，金流係下一步嘅增值功能」。
+        最後一條 bullet（開啟與否由你決定）係用嚟消除「會唔會被迫俾手續費」嘅疑慮。
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ ─────────────────────────────── -->
+  <section class="faq sec-pad" id="faq">
+    <div class="wrap">
+      <span class="eyebrow">❓ 常見問題</span>
+      <div class="h2" style="margin-top:14px">商家最常問嘅幾條</div>
+
+      <div class="faq-grid">
+        <div class="faq-card">
+          <div class="faq-q"><span>Q</span><b>我而用開嘅廚房打印機，用得嗎？</b></div>
+          <p>用得。USB 同 LAN 網絡打印機都支援，你唔使換機，直接設定你現有嗰部就得。標籤機一樣。</p>
+        </div>
+        <div class="faq-card">
+          <div class="faq-q"><span>Q</span><b>KDS 一定要買？我店仔細。</b></div>
+          <p>唔使。澳門大部份餐廳都係用廚房打印單，小店幾張枱，廚房打印已經夠用。KDS 留俾單量大或者想減少紙張嘅店，有需要先加。</p>
+        </div>
+        <div class="faq-card">
+          <div class="faq-q"><span>Q</span><b>點解要收月費？之前唔係話免費？</b></div>
+          <p>會員通平台（Ledger）本身仍然永久免費。月費係收銀系統同後廚屏呢類工具嘅使用費。我哋唔抽佣金，所以月費就係主要收入——呢個亦係你可以預算嘅原因。</p>
+        </div>
+        <div class="faq-card">
+          <div class="faq-q"><span>Q</span><b>試用期完咗，會唔會自動收錢？</b></div>
+          <p>唔會自動扣。試用完會問你續唔續，唔續就停用收銀功能，你嘅資料同會員記錄唔會消失。</p>
+        </div>
+        <div class="faq-card">
+          <div class="faq-q"><span>Q</span><b>我唔想俾手續費，得唔得？</b></div>
+          <p>得。金流對接係選配功能，唔開啟就完全零手續費。你可以一直用現金、轉帳或者現有收款方式，我哋只做記錄。</p>
+        </div>
+        <div class="faq-card">
+          <div class="faq-q"><span>Q</span><b>手機點餐要額外硬件嗎？</b></div>
+          <p>唔使。客人掃枱上嘅 QR code 就落得單，你只需要列印 QR 貼出嚟。QR 固定唔換碼，印一次可以用好耐。</p>
+        </div>
+      </div>
+
+      <div class="anno">
+        <b>註解（FAQ）</b>：第 3、4、5 條係專門拆彈——「點解突然收錢」、「會唔會偷偷扣」、
+        「會唔會逼我俾手續費」。呢三條唔主動答，商家自己會亂猜。
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ─────────────────────────────── -->
+  <section class="cta-sec sec-pad">
+    <div class="wrap">
+      <div class="cta-box">
+        <span class="eyebrow">開始試用</span>
+        <div class="h2">免費試一個月，用完再決定</div>
+        <p class="lead">
+          唔使即刻決定買邊個方案。先試一個月，覺得啱使先揀；覺得唔啱，直接停就得。
+          想睇實機示範，我哋可以上門或者線上同你行一次。
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-cta" href="#pricing">免費試用一個月 →</a>
+          <a class="btn btn-white" href="#faq">仲有問題？睇常見問題</a>
+        </div>
+        <div class="cta-hint">免佣金 · 不抽成 · 沿用現有硬件 · 冇綁約</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-in">
+        <div class="foot-brand">
+          <span class="brand-mark">澳</span>
+          <span>
+            <b>澳門會員通</b>
+            <span>MACAU MEMBERSHIP</span>
+          </span>
+        </div>
+        <div class="foot-links">
+          <a href="#printing">打印功能</a>
+          <a href="#hardware">硬件兼容</a>
+          <a href="#pricing">方案與定價</a>
+          <a href="#payments">金流規劃</a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div class="wrap">
+        <div class="foot-bottom-in">
+          <span>© 2026 澳門會員通 · All rights reserved.</span>
+          <span>價目以最新報價為準，如有調整會提前通知。</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<script>
+function fit(){
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("canvas");
+  if (!stage || !canvas) return;
+  var w = stage.clientWidth || 1280;
+  var s = Math.min(1, Math.max(w / 1280, 0.42));
+  canvas.style.transform = "scale(" + s + ")";
+  stage.style.height = Math.round(canvas.offsetHeight * s) + "px";
+}
+window.addEventListener("resize", fit);
+window.addEventListener("load", fit);
+fit();
+setTimeout(fit, 60);
+</script>
+</body>
+</html>
