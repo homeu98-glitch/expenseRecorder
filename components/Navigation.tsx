@@ -19,6 +19,10 @@ const adminNavItems = [
   { href: "/admin", label: "後台", icon: Shield },
   { href: "/admin/accounts", label: "賬戶", icon: Users },
   { href: "/admin/receipts", label: "單據", icon: Receipt },
+  // 支付方式主檔（2026-09-25）：全系統統一設置，POS 兩邊介面都由呢度派發。
+  // 圖示刻意用 `Wallet`（同商店端「付款」一致）而唔引入新圖示，
+  // 免得 lucide 版本對唔上時整個 admin 導覽爆掉。
+  { href: "/admin/payment-methods", label: "支付方式", icon: Wallet },
   { href: "/settings", label: "設定", icon: Settings },
 ];
 

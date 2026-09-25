@@ -167,6 +167,15 @@ export default function AdminPage() {
         </div>
         <h1 className="text-2xl font-bold text-gray-800">系統管理後台</h1>
         <p className="text-sm text-gray-500">全店數據報表與總覽</p>
+        {/* 快捷入口：主檔類設定唔喺導覽列最顯眼，補一行文字連結方便 admin 直達。 */}
+        <div className="flex flex-wrap gap-4 pt-1">
+          <Link href="/admin/accounts" className="text-xs font-black text-blue-600">
+            賬戶管理 →
+          </Link>
+          <Link href="/admin/payment-methods" className="text-xs font-black text-blue-600">
+            支付方式主檔 →
+          </Link>
+        </div>
       </header>
 
       {loading ? (
