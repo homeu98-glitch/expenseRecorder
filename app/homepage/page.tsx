@@ -65,7 +65,7 @@ const slogans = [
 
 const metrics = [
   { value: "免佣金", note: "不抽成，收益完整" },
-  { value: "Ledger 免月費", note: "App 永久免費" },
+  { value: "免費半年", note: "全線方案開通即用" },
   { value: "離線可用", note: "斷網照收照印" },
   { value: "三大業態", note: "餐飲·美容·零售" },
 ];
@@ -203,8 +203,8 @@ const plans: Plan[] = [
   {
     name: "只用 Ledger",
     sub: "會員通 App，免月費・免佣金",
-    price: "免費",
-    note: "永久免費",
+    price: "免費使用半年",
+    note: "半年後可繼續免月費使用 Ledger App",
     features: [
       "會員儲值與餘額",
       "現金券、禮品券、生日禮遇",
@@ -216,9 +216,8 @@ const plans: Plan[] = [
   {
     name: "macau-pos + ledger",
     sub: "收銀、打印、會員、報表全套",
-    price: "248",
-    unit: "MOP／月",
-    note: "首月試用，之後按月收費",
+    price: "免費使用半年",
+    note: "首半年全免，之後按月收費",
     hot: true,
     features: [
       "包含「只用 Ledger」全部功能",
@@ -232,9 +231,8 @@ const plans: Plan[] = [
   {
     name: "＋ KDS 後廚屏",
     sub: "後廚屏 + 出餐屏，取代紙單",
-    price: "348",
-    unit: "MOP／月",
-    note: "首月試用，之後按月收費",
+    price: "免費使用半年",
+    note: "首半年全免，之後按月收費",
     features: [
       "包含「macau-pos + ledger」全部功能",
       "後廚屏：睇單、點掉單品",
@@ -247,9 +245,8 @@ const plans: Plan[] = [
   {
     name: "＋ 手機點餐",
     sub: "客人掃碼自己落單，全套最齊",
-    price: "398",
-    unit: "MOP／月",
-    note: "首月試用，之後按月收費",
+    price: "免費使用半年",
+    note: "首半年全免，之後按月收費",
     features: [
       "包含「＋ KDS 後廚屏」全部功能",
       "客人掃枱上 QR 自己落單",
@@ -261,11 +258,20 @@ const plans: Plan[] = [
   },
 ];
 
-const faqs = [
+type FaqTier = { name: string; price: string };
+type Faq = { q: string; a: string; tiers?: FaqTier[] };
+
+const faqs: Faq[] = [
   { q: "我而用開嘅廚房打印機，用得嗎？", a: "用得。USB 同 LAN 網絡打印機都支援，你唔使換機，直接設定你現有嗰部就得。標籤機一樣。" },
   { q: "KDS 一定要買？我店仔細。", a: "唔使。澳門大部份餐廳都係用廚房打印單，小店幾張枱，廚房打印已經夠用。KDS 留俾單量大或者想減少紙張嘅店，有需要先加。" },
-  { q: "點解要收月費？之前唔係話免費？", a: "會員通 App（Ledger）本身仍然免月費、免佣金，永久免費。月費係收銀系統同後廚屏呢類工具嘅使用費，兩者分開計。" },
-  { q: "試用期完咗，會唔會自動收錢？", a: "唔會自動扣。試用完會問你續唔續，唔續就停用收銀功能，你嘅資料同會員記錄唔會消失。" },
+  { q: "點解要收月費？之前唔係話免費？", a: "而家所有方案都係免費使用半年，開通即用，半年內一毫子都唔收。半年之後，Ledger 會員通 App 依然免月費、免佣金；只有需要收銀系統同後廚屏呢類工具嘅方案先按月收費，兩者分開計。" },
+  { q: "半年之後月費幾多？", a: "只用 Ledger 會員通 App 一直免費，冇月費、冇佣金。要收銀就 248 MOP／月；再加後廚屏 348 MOP／月；要埋客人掃碼自己落單就 398 MOP／月。全部都係半年免費期完咗先開始收，唔用唔收。", tiers: [
+    { name: "只用 Ledger", price: "一直免費" },
+    { name: "macau-pos + ledger", price: "248 MOP／月" },
+    { name: "＋ KDS 後廚屏", price: "348 MOP／月" },
+    { name: "＋ 手機點餐", price: "398 MOP／月" },
+  ] },
+  { q: "半年免費期完咗，會唔會自動收錢？", a: "唔會自動扣。半年快到嘅時候會問你續唔續，唔續就停用收銀功能，你嘅資料同會員記錄唔會消失。想繼續用先俾錢，主動權喺你手上。" },
   { q: "我唔想俾手續費，得唔得？", a: "得。金流對接係選配功能，唔開啟就完全零手續費。你可以一直用現金、轉帳或者現有收款方式，我哋只做記錄。" },
   { q: "手機點餐要額外硬件嗎？", a: "唔使。客人掃枱上嘅 QR code 就落得單，你只需要列印 QR 貼出嚟。QR 固定唔換碼，印一次可以用好耐。" },
 ];
@@ -402,14 +408,14 @@ export default function Homepage() {
         <div className="hp-wrap">
           <div className="hp-hero-in">
             <div>
-              <span className="hp-eyebrow">免佣金 · Ledger 免月費 · 澳門本地平台</span>
+              <span className="hp-eyebrow">免佣金 · 免費使用半年 · 澳門本地平台</span>
               <h1>
                 由收銀到會員
                 <em>一套系統搞掂</em>
               </h1>
               <p className="hp-hero-lead">
-                掃碼點餐、後廚出單、桌台收銀、會員儲值——會員通 App 免月費、免佣金，
-                收銀工具按需要逐項加。唔抽成，把街坊客沉澱成你自己嘅私域生意。
+                掃碼點餐、後廚出單、桌台收銀、會員儲值——全部方案免費使用半年，
+                之後仍然免佣金、唔抽成。把街坊客沉澱成你自己嘅私域生意。
               </p>
 
               <div className="hp-slogans">
@@ -912,9 +918,9 @@ export default function Homepage() {
           <span className="hp-eyebrow">方案與定價</span>
           <div className="hp-h2" style={{ marginTop: 14 }}>按你需要揀，唔使為用唔到嘅功能俾錢</div>
           <p className="hp-lead" style={{ marginTop: 14, maxWidth: 820 }}>
-            <b>澳門會員通 App（Ledger）免月費、免佣金，永久免費</b>。需要收銀就加 POS，
+            <b>澳門會員通 App（Ledger）免月費、免佣金</b>。需要收銀就加 POS，
             需要後廚屏再加 KDS，需要客人自己落單再加手機點餐——逐項按你要嘅加。
-            收費嘅方案首月試用期，之後按月收。冇綁約、冇最低消費，唔用就停。
+            而家全線方案一律<b>免費使用半年</b>，開通即用，唔使先俾錢。半年後再按你實際用嘅方案續，冇綁約、冇最低消費，唔用就停。
           </p>
 
           <div className="hp-plans">
@@ -941,7 +947,7 @@ export default function Homepage() {
                     className={clsx("hp-btn", p.hot ? "hp-btn-cta" : "hp-btn-line")}
                     href={MERCHANT_LOGIN_URL}
                   >
-                    {p.price === "免費" ? "免費開始" : "免費試一個月"}
+                    開通即送半年免費使用
                   </Link>
                 </div>
               </div>
@@ -950,10 +956,11 @@ export default function Homepage() {
 
           <div className="hp-why">
             <div>
-              <h3>點解係固定月費，而唔係抽佣金？</h3>
+              <h3>半年之後，月費點計？</h3>
               <p>
-                外賣平台一般抽 20-30%。你生意越好，俾得越多，而且冇上限——做十萬生意，三萬就係平台嘅。
-                我哋唔抽成：月費固定，做三萬做三十萬都係嗰個價。生意做大咗，成本唔會跟住升。
+                半年免費期內你想試齊全部功能都得，唔使為睇唔到嘅功能俾錢。
+                免費期完之後，我哋唔抽佣，只收固定月費：外賣平台一般抽 20-30%，你做生意嘅錢先入平台袋；
+                我哋月費固定，做三萬做三十萬都係嗰個價，生意做大咗成本唔會跟住升。
                 對小店嚟講，固定成本先係可以計劃嘅成本。
               </p>
             </div>
@@ -962,7 +969,7 @@ export default function Homepage() {
                 <b>抽佣平台</b>營業額越高 → 抽得越多，冇上限。推廣要另外俾錢，唔俾就冇流量。
               </div>
               <div className="hp-why-box hp-good">
-                <b>澳門會員通</b>固定月費，唔抽成。客人係你自己嘅，唔會因為唔俾推廣費就消失。
+                <b>澳門會員通</b>半年免費試到夠，之後固定月費、唔抽成。客人係你自己嘅，唔會因為唔俾推廣費就消失。
               </div>
             </div>
           </div>
@@ -1028,13 +1035,23 @@ export default function Homepage() {
           <div className="hp-h2" style={{ marginTop: 14 }}>商家最常問嘅幾條</div>
 
           <div className="hp-faq-grid">
-            {faqs.map(({ q, a }) => (
+            {faqs.map(({ q, a, tiers }) => (
               <div className="hp-faq-card" key={q}>
                 <div className="hp-faq-q">
                   <span><HelpCircle size={14} /></span>
                   <b>{q}</b>
                 </div>
                 <p>{a}</p>
+                {tiers ? (
+                  <div className="hp-faq-tiers">
+                    {tiers.map((t) => (
+                      <div className="hp-faq-tier" key={t.name}>
+                        <span>{t.name}</span>
+                        <b>{t.price}</b>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

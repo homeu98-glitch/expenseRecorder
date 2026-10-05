@@ -509,6 +509,11 @@
 }
 .hp-faq-q b{font-size:15.5px;font-weight:900;line-height:1.5}
 .hp-faq-card p{margin-top:12px;font-size:13.5px;color:var(--slate);line-height:1.78}
+.hp-faq-tiers{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--sand);overflow:hidden}
+.hp-faq-tier{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 15px;font-size:13px}
+.hp-faq-tier+.hp-faq-tier{border-top:1px solid var(--line)}
+.hp-faq-tier span{color:var(--ink2);font-weight:700}
+.hp-faq-tier b{color:var(--green-d);font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* ── 教學影片 ─────────────────────────────── */
 .hp-vids{background:linear-gradient(180deg,#f9f7f2,#fdfbf8)}

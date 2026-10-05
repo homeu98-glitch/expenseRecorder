@@ -512,6 +512,11 @@ section{border-bottom:1px solid var(--line)}
 }
 .faq-q b{font-size:15.5px;font-weight:900;line-height:1.5}
 .faq-card p{margin-top:12px;font-size:13.5px;color:var(--slate);line-height:1.78}
+.faq-tiers{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--sand);overflow:hidden}
+.faq-tier{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 15px;font-size:13px}
+.faq-tier+.faq-tier{border-top:1px solid var(--line)}
+.faq-tier span{color:var(--ink2);font-weight:700}
+.faq-tier b{color:var(--green-d);font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* ── 教學影片 ─────────────────────────────── */
 .vids{background:linear-gradient(180deg,#f9f7f2,#fdfbf8)}
@@ -596,11 +601,11 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
     <div class="wrap">
       <div class="hero-in">
         <div>
-          <span class="eyebrow">免佣金 · Ledger 免月費 · 澳門本地平台</span>
+          <span class="eyebrow">免佣金 · 免費使用半年 · 澳門本地平台</span>
           <h1>由收銀到會員<em>一套系統搞掂</em></h1>
           <p class="hero-lead">
-            掃碼點餐、後廚出單、桌台收銀、會員儲值——會員通 App 免月費、免佣金，
-            收銀工具按需要逐項加。唔抽成，把街坊客沉澱成你自己嘅私域生意。
+            掃碼點餐、後廚出單、桌台收銀、會員儲值——全部方案免費使用半年，
+            之後仍然免佣金、唔抽成。把街坊客沉澱成你自己嘅私域生意。
           </p>
 
           <div class="slogans">
@@ -617,7 +622,7 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
 
           <div class="metrics">
             <div class="metric"><b>免佣金</b><span>不抽成，收益完整</span></div>
-            <div class="metric"><b>Ledger 免月費</b><span>會員通 App 永久免費</span></div>
+            <div class="metric"><b>免費半年</b><span>全線方案開通即用</span></div>
             <div class="metric"><b>離線可用</b><span>斷網照收照印</span></div>
             <div class="metric"><b>三大業態</b><span>餐飲 · 美容 · 零售</span></div>
           </div>
@@ -1229,17 +1234,17 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
       <span class="eyebrow">💰 方案與定價</span>
       <div class="h2" style="margin-top:14px">按你需要揀，唔使為用唔到嘅功能俾錢</div>
       <p class="lead" style="margin-top:14px;max-width:820px">
-        <b>澳門會員通 App（Ledger）免月費、免佣金，永久免費</b>。需要收銀就加 POS，
+        <b>澳門會員通 App（Ledger）免月費、免佣金</b>。需要收銀就加 POS，
         需要後廚屏再加 KDS，需要客人自己落單再加手機點餐——逐項按你要嘅加。
-        收費嘅方案首月試用期，之後按月收。冇綁約、冇最低消費，唔用就停。
+        而家全線方案一律<b>免費使用半年</b>，開通即用，唔使先俾錢。半年後再按你實際用嘅方案續，冇綁約、冇最低消費，唔用就停。
       </p>
 
       <div class="plans">
         <div class="plan">
           <div class="plan-name">只用 Ledger</div>
           <div class="plan-sub">會員通 App，免月費・免佣金</div>
-          <div class="plan-price free"><b>免費</b></div>
-          <div class="plan-note">永久免費</div>
+          <div class="plan-price free"><b>免費使用半年</b></div>
+          <div class="plan-note">半年後可繼續免月費使用 Ledger App</div>
           <div class="plan-list">
             <div class="plan-li"><em>✓</em>會員儲值與餘額</div>
             <div class="plan-li"><em>✓</em>現金券、禮品券、生日禮遇</div>
@@ -1255,8 +1260,8 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
           <span class="plan-tag">最多人揀</span>
           <div class="plan-name">macau-pos + ledger</div>
           <div class="plan-sub">收銀、打印、會員、報表全套</div>
-          <div class="plan-price"><b>248</b><u>MOP／月</u></div>
-          <div class="plan-note">首月試用，之後按月收費</div>
+          <div class="plan-price free"><b>免費使用半年</b></div>
+          <div class="plan-note">首半年全免，之後按月收費</div>
           <div class="plan-list">
             <div class="plan-li"><em>✓</em>包含「只用 Ledger」全部功能</div>
             <div class="plan-li"><em>✓</em>堂食／快餐收銀台、桌台總覽</div>
@@ -1265,14 +1270,14 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
             <div class="plan-li"><em>✓</em>營業報表、班次交接、沽清</div>
             <div class="plan-li"><em>✓</em>離線照收，復網自動補傳</div>
           </div>
-          <div class="plan-cta"><a class="btn btn-cta" href="#contact">免費試一個月</a></div>
+          <div class="plan-cta"><a class="btn btn-cta" href="#contact">開通即送半年免費使用</a></div>
         </div>
 
         <div class="plan">
           <div class="plan-name">＋ KDS 後廚屏</div>
           <div class="plan-sub">後廚屏 + 出餐屏，取代紙單</div>
-          <div class="plan-price"><b>348</b><u>MOP／月</u></div>
-          <div class="plan-note">首月試用，之後按月收費</div>
+          <div class="plan-price free"><b>免費使用半年</b></div>
+          <div class="plan-note">首半年全免，之後按月收費</div>
           <div class="plan-list">
             <div class="plan-li"><em>✓</em>包含「macau-pos + ledger」全部功能</div>
             <div class="plan-li"><em>✓</em>後廚屏：睇單、點掉單品</div>
@@ -1281,14 +1286,14 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
             <div class="plan-li"><em>✓</em>廚房打印照樣並存，唔會二選一</div>
             <div class="plan-li off"><em>✗</em>客人掃碼點餐</div>
           </div>
-          <div class="plan-cta"><a class="btn btn-line" href="#contact">免費試一個月</a></div>
+          <div class="plan-cta"><a class="btn btn-line" href="#contact">開通即送半年免費使用</a></div>
         </div>
 
         <div class="plan">
           <div class="plan-name">＋ 手機點餐</div>
           <div class="plan-sub">客人掃碼自己落單，全套最齊</div>
-          <div class="plan-price"><b>398</b><u>MOP／月</u></div>
-          <div class="plan-note">首月試用，之後按月收費</div>
+          <div class="plan-price free"><b>免費使用半年</b></div>
+          <div class="plan-note">首半年全免，之後按月收費</div>
           <div class="plan-list">
             <div class="plan-li"><em>✓</em>包含「＋ KDS 後廚屏」全部功能</div>
             <div class="plan-li"><em>✓</em>客人掃枱上 QR 自己落單</div>
@@ -1297,7 +1302,7 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
             <div class="plan-li"><em>✓</em>落單即入廚房同收銀，前台唔使抄單</div>
             <div class="plan-li"><em>✓</em>QR 固定唔換碼，自己列印貼出</div>
           </div>
-          <div class="plan-cta"><a class="btn btn-line" href="#contact">免費試一個月</a></div>
+          <div class="plan-cta"><a class="btn btn-line" href="#contact">開通即送半年免費使用</a></div>
         </div>
       </div>
 
@@ -1383,11 +1388,21 @@ footer{background:var(--sand);color:var(--slate);border-top:1px solid var(--line
         </div>
         <div class="faq-card">
           <div class="faq-q"><span>Q</span><b>點解要收月費？之前唔係話免費？</b></div>
-          <p>會員通 App（Ledger）本身仍然免月費、免佣金，永久免費。月費係收銀系統同後廚屏呢類工具嘅使用費，兩者分開計。</p>
+          <p>而家所有方案都係免費使用半年，開通即用，半年內一毫子都唔收。半年之後，Ledger 會員通 App 依然免月費、免佣金；只有需要收銀系統同後廚屏呢類工具嘅方案先按月收費，兩者分開計。</p>
         </div>
         <div class="faq-card">
-          <div class="faq-q"><span>Q</span><b>試用期完咗，會唔會自動收錢？</b></div>
-          <p>唔會自動扣。試用完會問你續唔續，唔續就停用收銀功能，你嘅資料同會員記錄唔會消失。</p>
+          <div class="faq-q"><span>Q</span><b>半年之後月費幾多？</b></div>
+          <p>只用 Ledger 會員通 App 一直免費，冇月費、冇佣金。要收銀就 248 MOP／月；再加後廚屏 348 MOP／月；要埋客人掃碼自己落單就 398 MOP／月。全部都係半年免費期完咗先開始收，唔用唔收。</p>
+          <div class="faq-tiers">
+            <div class="faq-tier"><span>只用 Ledger</span><b>一直免費</b></div>
+            <div class="faq-tier"><span>macau-pos + ledger</span><b>248 MOP／月</b></div>
+            <div class="faq-tier"><span>＋ KDS 後廚屏</span><b>348 MOP／月</b></div>
+            <div class="faq-tier"><span>＋ 手機點餐</span><b>398 MOP／月</b></div>
+          </div>
+        </div>
+        <div class="faq-card">
+          <div class="faq-q"><span>Q</span><b>半年免費期完咗，會唔會自動收錢？</b></div>
+          <p>唔會自動扣。半年快到嘅時候會問你續唔續，唔續就停用收銀功能，你嘅資料同會員記錄唔會消失。想繼續用先俾錢，主動權喺你手上。</p>
         </div>
         <div class="faq-card">
           <div class="faq-q"><span>Q</span><b>我唔想俾手續費，得唔得？</b></div>
