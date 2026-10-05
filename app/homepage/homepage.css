@@ -569,3 +569,182 @@
 .hp-bleed{width:100vw;position:relative;left:50%;margin-left:-50vw;}
 .hp-sec{padding:76px 0;border-bottom:1px solid var(--line);}
 .hp-sec.hp-nav,.hp-sec.hp-hero{padding:0;}
+
+/* ══════════════════════════════════════════════
+   響應式（RWD）
+   設計稿為 1440 固定畫布，以下為實作用的自適應規則
+   斷點：1024 平板 / 768 手機 / 480 細機
+   ══════════════════════════════════════════════ */
+
+/* ── 平板（≤1024）────────────────────────────── */
+@media (max-width:1024px){
+  .hp-wrap{padding:0 20px}
+  .hp-sec{padding:60px 0}
+
+  /* 導覽：收起中間選單，只留品牌 + CTA */
+  .hp-navmenu{display:none}
+  .hp-nav-in{grid-template-columns:minmax(0,1fr) auto;gap:14px}
+
+  /* Hero：改單欄，手機示意圖放下面 */
+  .hp-hero-in{grid-template-columns:minmax(0,1fr);gap:36px;padding:44px 0 54px}
+  .hp-hero h1{font-size:44px}
+  .hp-hero-lead{max-width:none}
+  .hp-hero-side{order:2}
+  .hp-hero-side-note{margin-top:12px}
+
+  /* 多欄 grid 一律降為 2 欄 */
+  .hp-grid3,.hp-grid4,.hp-mer-grid,.hp-pr-grid,.hp-hw-grid,
+  .hp-onl-grid,.hp-rep-grid,.hp-plans{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+  /* 橫向兩欄區塊改單欄 */
+  .hp-why{grid-template-columns:minmax(0,1fr);gap:24px;padding:28px}
+  .hp-show-item{grid-template-columns:minmax(0,1fr);gap:26px;padding:34px 0}
+  .hp-scan-wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .hp-contact-box{grid-template-columns:minmax(0,1fr);gap:28px;padding:32px}
+
+  /* 條狀區塊：文字在上、按鈕在右下，改為堆疊 */
+  .hp-cust-strip,.hp-mer-foot,.hp-callout,.hp-hw-strip{
+    grid-template-columns:minmax(0,1fr);gap:16px;padding:20px 22px;
+  }
+  .hp-cust-strip .hp-btn,.hp-mer-foot .hp-btn,.hp-hw-strip .hp-btn{justify-self:start}
+  .hp-callout-quote{white-space:normal;text-align:left}
+
+  /* 五步流程：3 + 2 換行 */
+  .hp-flowline{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+  .hp-h2{font-size:32px}
+  .hp-lane-head{grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+}
+
+/* ── 手機（≤768）──────────────────────────────── */
+@media (max-width:768px){
+  .hp-wrap{padding:0 18px}
+  .hp-sec{padding:48px 0}
+
+  .hp-h2{font-size:26px;line-height:1.25}
+  .hp-lead{font-size:15px;line-height:1.72}
+  .hp-eyebrow{font-size:11px;padding:7px 13px}
+
+  /* 導覽：品牌縮細，CTA 縮短 */
+  .hp-brand-mark{width:38px;height:38px;border-radius:12px;font-size:17px}
+  .hp-brand-t{font-size:15px}
+  .hp-brand-s{font-size:9px;letter-spacing:.12em}
+  .hp-nav-in{padding:10px 0}
+  .hp-nav-in .hp-btn{padding:10px 14px;font-size:13px;border-radius:12px}
+
+  /* Hero */
+  .hp-hero-in{padding:32px 0 44px;gap:28px}
+  .hp-hero h1{font-size:32px;line-height:1.16;margin-top:16px}
+  .hp-hero-lead{font-size:15px;margin-top:14px}
+  .hp-hero-cta{gap:10px;margin-top:20px}
+  .hp-hero-cta .hp-btn{flex:1 1 100%;padding:14px 20px}
+
+  /* 手機示意圖：縮細免壓爆 */
+  .hp-phone{width:210px}
+  .hp-phone-scr{height:400px}
+
+  /* 指標卡：2×2，唔再壓成直條 */
+  .hp-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:20px}
+  .hp-metric{padding:12px}
+  .hp-metric b{font-size:14px}
+  .hp-metric span{font-size:11px}
+
+  /* slogan：橫向可讀 */
+  .hp-slogan{padding:11px 14px;font-size:13.5px}
+
+  /* 一般卡片 */
+  .hp-card{border-radius:18px;padding:20px}
+  .hp-choose-card{border-radius:22px;padding:24px}
+  .hp-choose-card h3{font-size:23px}
+  .hp-choose-cta{flex-direction:column}
+  .hp-choose-cta .hp-btn{width:100%}
+
+  /* 所有多欄 → 單欄 */
+  .hp-grid2,.hp-grid3,.hp-grid4,
+  .hp-mer-grid,.hp-pr-grid,.hp-hw-grid,.hp-onl-grid,.hp-rep-grid,
+  .hp-plans,.hp-pay-grid,.hp-faq-grid,.hp-vid-grid,
+  .hp-kds-cols,.hp-scan-wrap{grid-template-columns:minmax(0,1fr)}
+
+  /* 商家業態分頁：可橫向捲動，唔壓爆 */
+  .hp-bizline{gap:8px;margin:20px 0;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .hp-biztab{flex:none;padding:11px 16px;font-size:13.5px}
+
+  /* 方案卡：單欄後唔需要 min-height 撐齊 */
+  .hp-plan{padding:22px 18px}
+  .hp-plan-sub{min-height:0}
+  .hp-plan-price b{font-size:30px}
+  .hp-plan-tag{left:18px}
+
+  /* 定價對比 */
+  .hp-why{padding:22px;border-radius:20px}
+  .hp-why h3{font-size:20px}
+  .hp-why-box{padding:14px 16px;font-size:13px}
+
+  /* Showcase */
+  .hp-show-item{padding:28px 0;gap:20px}
+  .hp-show-item h3{font-size:24px}
+  .hp-show-item p{font-size:14.5px}
+  .hp-showcmp{flex-direction:column;gap:9px}
+
+  /* KDS / 掃碼示意 */
+  .hp-mock-frame{padding:12px}
+  .hp-kds-cols{gap:9px}
+  .hp-scan-card,.hp-scanpay{padding:16px}
+
+  /* 流程圖：2 欄 */
+  .hp-flowline{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  /* 最後一個（第 5 個）單獨佔滿，避免落單 */
+  .hp-flow:last-child{grid-column:1/-1}
+
+  /* 按鈕唔好爆格 */
+  .hp-btn{padding:13px 20px;font-size:14px;border-radius:14px}
+
+  /* 教學影片縮圖 */
+  .hp-vid-thumb{height:170px}
+
+  /* 聯絡區：二維碼縮細、置中 */
+  .hp-contact-box{padding:24px 20px;border-radius:24px;gap:24px}
+  .hp-qr-big{width:190px;height:190px;padding:13px;margin:0 auto}
+
+  /* Footer 堆疊 */
+  .hp-foot-in,.hp-foot-bottom-in{grid-template-columns:minmax(0,1fr);gap:14px;padding:24px 0}
+  .hp-foot-links{flex-wrap:wrap;gap:14px}
+
+  /* FAQ 月費階梯：窄螢幕改上下排 */
+  .hp-faq-tier{flex-direction:column;align-items:flex-start;gap:2px}
+  .hp-faq-tier b{font-size:13.5px}
+}
+
+/* ── 細機（≤480）──────────────────────────────── */
+@media (max-width:480px){
+  .hp-wrap{padding:0 16px}
+  .hp-sec{padding:42px 0}
+
+  .hp-h2{font-size:23px}
+  .hp-hero h1{font-size:28px}
+  .hp-hero-lead{font-size:14.5px}
+  .hp-choose-card h3{font-size:21px}
+  .hp-show-item h3{font-size:21px}
+  .hp-pay-card h3{font-size:19px}
+  .hp-why h3{font-size:18px}
+
+  .hp-card,.hp-cust-card,.hp-mer-card,.hp-pr-card,.hp-hw-card,
+  .hp-onl-card,.hp-rep-card,.hp-faq-card,.hp-pay-card{padding:18px}
+
+  .hp-phone{width:186px}
+  .hp-phone-scr{height:362px}
+  .hp-metrics{grid-template-columns:minmax(0,1fr)}
+  .hp-flowline{grid-template-columns:minmax(0,1fr)}
+  .hp-flow:last-child{grid-column:auto}
+
+  .hp-qr-big{width:168px;height:168px}
+  .hp-brand-t{font-size:14px}
+}
+
+/* 尊重「減少動態效果」系統設定 */
+@media (prefers-reduced-motion:reduce){
+  .hp-root *,.hp-root *::before,.hp-root *::after{
+    animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important;scroll-behavior:auto!important;
+  }
+}

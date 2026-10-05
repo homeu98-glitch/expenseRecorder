@@ -443,7 +443,7 @@ export default function Homepage() {
               </div>
             </div>
 
-            <div>
+            <div className="hp-hero-side">
               <div className="hp-phone">
                 <div className="hp-phone-scr">
                   {current.kind === "demo" ? (
