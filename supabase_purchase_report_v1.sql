@@ -1,0 +1,296 @@
+-- ============================================================
+-- Ledger → expenseRecorder 買貨報表 API（v1, 單 endpoint）
+-- 執行位置：expenseRecorder Supabase 專案 SQL Editor
+--   https://supabase.com/dashboard/project/fjvfvpedklhdenavbcjg → SQL Editor
+-- 對應契約：expenseRecorder/docs/LEDGER_PURCHASE_REPORT_API.md (v1 定稿)
+-- 冪等：create or replace，可重複執行。無 trigger／無預聚合表（v1 即時 GROUP BY）。
+--
+-- 資料來源（已對齊 expenseRecorder 真實 schema）：
+--   shopId (Ledger merchants.id) → shop_users.external_shop_id → shop_users.id → receipts.user_id
+--   receipts.receipt_type='stock_in' 先篩；
+--   payment_method / payment_status / input_method / receipt_number 係 raw_ocr_data JSONB 頂層 key；
+--   receipt_items 冇 unit 欄 ⇒ items.unit 回 null（契約 §6.3 降級）；
+--   supplier = merchants.name（經 receipts.merchant_id join）。
+--   聚合全部行 SQL GROUP BY（唔返原始單據行，避 1000 行截斷）；明細層 receipts[] 截 500。
+-- ============================================================
+
+-- 支付方式正規化（契約 §6.2 白名單：舊資料可能存中文）
+create or replace function public.norm_payment_method(raw text) returns text
+language sql immutable as $$
+  select case
+    when btrim(coalesce(raw, '')) = '' then 'unknown'
+    when lower(btrim(raw)) in ('cash', '現金') then 'cash'
+    when lower(btrim(raw)) in ('bank_transfer', '銀行轉賬', 'bank transfer') then 'bank_transfer'
+    when lower(btrim(raw)) in ('fps', '轉數快', 'faster payment', 'fasterpayment') then 'fps'
+    when lower(btrim(raw)) in ('cheque', '支票') then 'cheque'
+    when lower(btrim(raw)) in ('monthly', '月結') then 'monthly'
+    when lower(btrim(raw)) in ('pay_later', '稍後付款', '稍後支付', 'pay later') then 'pay_later'
+    when lower(btrim(raw)) in ('on_delivery', '交貨付款', '貨到付款', 'on delivery') then 'on_delivery'
+    else 'unknown'
+  end
+$$;
+
+create or replace function public.payment_method_label(raw text) returns text
+language sql immutable as $$
+  select case
+    when btrim(coalesce(raw, '')) = '' then '未知'
+    when lower(btrim(raw)) in ('cash', '現金') then '現金'
+    when lower(btrim(raw)) in ('bank_transfer', '銀行轉賬', 'bank transfer') then '銀行轉賬'
+    when lower(btrim(raw)) in ('fps', '轉數快', 'faster payment', 'fasterpayment') then '轉數快'
+    when lower(btrim(raw)) in ('cheque', '支票') then '支票'
+    when lower(btrim(raw)) in ('monthly', '月結') then '月結'
+    when lower(btrim(raw)) in ('pay_later', '稍後付款', '稍後支付', 'pay later') then '稍後付款'
+    when lower(btrim(raw)) in ('on_delivery', '交貨付款', '貨到付款', 'on delivery') then '交貨付款'
+    else '未知'
+  end
+$$;
+
+create or replace function public.ledger_purchase_report(
+  p_shop_id text,
+  p_from date default null,
+  p_to date default null
+)
+returns jsonb
+language plpgsql
+stable
+security invoker
+set search_path = public
+as $$
+declare
+  v_user_id uuid;
+  v_found boolean;
+  v_from date;
+  v_to date;
+  v_receipts_total bigint;
+  v_items_total bigint;
+  v_supplier_count bigint;
+  v_item_line_count bigint;
+  v_by_currency jsonb;
+  v_daily jsonb;
+  v_receipts jsonb;
+  v_items jsonb;
+  v_suppliers jsonb;
+  v_payment jsonb;
+begin
+  if p_shop_id is null or btrim(p_shop_id) = '' then
+    raise exception 'p_shop_id 必填' using errcode = '22023';
+  end if;
+  v_to   := coalesce(p_to, (now() at time zone 'Asia/Macau')::date);
+  v_from := coalesce(p_from, v_to);
+  if v_from > v_to then v_from := v_to; end if;
+
+  -- shopId → shop_users.id（契約 §0/§5）
+  select id into v_user_id from shop_users where external_shop_id = p_shop_id;
+  v_found := v_user_id is not null;
+  if not v_found then
+    return jsonb_build_object('found', false);
+  end if;
+
+  -- range-level 計數
+  select count(*) into v_receipts_total
+  from receipts r
+  where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to;
+
+  select count(*) into v_item_line_count
+  from receipt_items it
+  join receipts r on r.id = it.receipt_id
+  where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to;
+
+  -- KPI.byCurrency
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'currency', currency, 'receiptCount', receipt_count, 'totalAmount', total_amount,
+    'avgPerReceipt', case when receipt_count > 0 then round(total_amount / receipt_count, 2) else 0 end
+  ) order by currency), '[]'::jsonb)
+  into v_by_currency
+  from (
+    select r.currency, count(*) receipt_count, sum(r.total_amount) total_amount
+    from receipts r
+    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    group by r.currency
+  ) a;
+
+  -- daily (date, currency)
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'date', to_char(receipt_date, 'YYYY-MM-DD'), 'currency', currency,
+    'receiptCount', receipt_count, 'totalAmount', total_amount
+  ) order by receipt_date, currency), '[]'::jsonb)
+  into v_daily
+  from (
+    select r.receipt_date, r.currency, count(*) receipt_count, sum(r.total_amount) total_amount
+    from receipts r
+    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    group by r.receipt_date, r.currency
+  ) a;
+
+  -- suppliers[]（merchants.name + merchant_id, currency）
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'name', name, 'supplierId', supplier_id, 'currency', currency,
+    'receiptCount', receipt_count, 'totalAmount', total_amount
+  ) order by total_amount desc), '[]'::jsonb)
+  into v_suppliers
+  from (
+    select m.name, r.merchant_id as supplier_id, r.currency,
+           count(*) receipt_count, sum(r.total_amount) total_amount
+    from receipts r
+    left join merchants m on m.id = r.merchant_id
+    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    group by m.name, r.merchant_id, r.currency
+  ) s;
+
+  select count(distinct r.merchant_id) into v_supplier_count
+  from receipts r
+  where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    and r.merchant_id is not null;
+
+  -- paymentBreakdown[]（正規化 method + label, currency）
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'method', method, 'label', label, 'currency', currency,
+    'receiptCount', receipt_count, 'totalAmount', total_amount
+  ) order by total_amount desc), '[]'::jsonb)
+  into v_payment
+  from (
+    select
+      norm_payment_method(r.raw_ocr_data->>'payment_method') as method,
+      payment_method_label(r.raw_ocr_data->>'payment_method') as label,
+      r.currency, count(*) receipt_count, sum(r.total_amount) total_amount
+    from receipts r
+    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    group by method, label, r.currency
+  ) p;
+
+  -- items[] 聚合（name + currency；unit 冇欄 ⇒ null；升跌 vs 區間前；截 1000）
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'name', name, 'unit', null, 'currency', currency,
+    'totalQuantity', total_quantity, 'totalAmount', total_amount,
+    'avgUnitPrice', case when total_quantity > 0 then round(total_amount / total_quantity, 2) else 0 end,
+    'lineCount', line_count, 'lastPurchaseDate', last_purchase_date,
+    'changePercent', change_percent, 'direction', direction
+  ) order by total_amount desc), '[]'::jsonb)
+  into v_items
+  from (
+    select g.name, g.currency, g.total_quantity, g.total_amount, g.line_count, g.last_purchase_date,
+           case when g.prev_avg is null or g.prev_avg = 0 then 'new'
+                when g.cur_avg > g.prev_avg then 'up'
+                when g.cur_avg < g.prev_avg then 'down' else 'same' end as direction,
+           case when g.prev_avg is null or g.prev_avg = 0 then null
+                else round((g.cur_avg - g.prev_avg) / g.prev_avg * 100, 2) end as change_percent
+    from (
+      select
+        it.name, r.currency,
+        sum(it.quantity) as total_quantity,
+        sum(it.total_price) as total_amount,
+        count(*) as line_count,
+        max(r.receipt_date)::text as last_purchase_date,
+        case when sum(it.quantity) > 0 then sum(it.total_price) / sum(it.quantity) else null end as cur_avg,
+        (
+          select case when sum(it2.quantity) > 0 then sum(it2.total_price) / sum(it2.quantity) else null end
+          from receipt_items it2
+          join receipts r2 on r2.id = it2.receipt_id
+          where r2.user_id = v_user_id and r2.receipt_type = 'stock_in'
+            and r2.receipt_date < v_from
+            and lower(btrim(it2.name)) = lower(btrim(it.name))
+            and r2.currency = r.currency
+        ) as prev_avg,
+        row_number() over (order by sum(it.total_price) desc) as rn
+      from receipt_items it
+      join receipts r on r.id = it.receipt_id
+      where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+      group by it.name, r.currency
+    ) g
+  ) ranked
+  where rn <= 1000;
+
+  select count(*) into v_items_total from (
+    select 1 from receipt_items it
+    join receipts r on r.id = it.receipt_id
+    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    group by it.name, r.currency
+  ) s;
+
+  -- receipts[] 明細（新→舊，截 500；item.unit = null；絕不回 raw_ocr_data）
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'receiptId', id,
+    'receiptNumber', receipt_number,
+    'receiptDate', to_char(receipt_date, 'YYYY-MM-DD'),
+    'recordedAt', created_at,
+    'receiptType', receipt_type,
+    'category', category,
+    'supplierName', supplier_name,
+    'supplierId', merchant_id,
+    'currency', currency,
+    'totalAmount', total_amount,
+    'paymentMethod', payment_method_norm,
+    'paymentStatus', payment_status,
+    'inputMethod', input_method,
+    'items', items_json
+  ) order by receipt_date desc, id desc), '[]'::jsonb)
+  into v_receipts
+  from (
+    select
+      r.id, r.receipt_date, r.created_at, r.receipt_type, r.category,
+      r.merchant_id, r.currency, r.total_amount,
+      m.name as supplier_name,
+      r.raw_ocr_data->>'receipt_number' as receipt_number,
+      r.raw_ocr_data->>'payment_status' as payment_status,
+      r.raw_ocr_data->>'input_method' as input_method,
+      norm_payment_method(r.raw_ocr_data->>'payment_method') as payment_method_norm,
+      (
+        select coalesce(jsonb_agg(jsonb_build_object(
+          'lineId', i.id, 'name', i.name, 'quantity', i.quantity,
+          'unit', null, 'unitPrice', i.unit_price, 'totalPrice', i.total_price,
+          'productKey', i.product_key, 'isStockItem', i.is_stock_item
+        ) order by i.id), '[]'::jsonb)
+        from receipt_items i where i.receipt_id = r.id
+      ) as items_json,
+      row_number() over (order by r.receipt_date desc, r.id desc) as rn
+    from receipts r
+    left join merchants m on m.id = r.merchant_id
+    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    order by r.receipt_date desc, r.id desc
+    limit 501
+  ) base
+  where rn <= 500;
+
+  return jsonb_build_object(
+    'found', true,
+    'from', to_char(v_from, 'YYYY-MM-DD'),
+    'to', to_char(v_to, 'YYYY-MM-DD'),
+    'kpi', jsonb_build_object(
+      'currencies', coalesce((
+        select jsonb_agg(c order by c) from (
+          select distinct (x->>'currency') as c from jsonb_array_elements(v_by_currency) x
+        ) t), '[]'::jsonb),
+      'byCurrency', v_by_currency,
+      'receiptCount', v_receipts_total,
+      'totalAmount', null,
+      'itemLineCount', v_item_line_count,
+      'supplierCount', v_supplier_count,
+      'avgPerReceiptDay', null
+    ),
+    'daily', v_daily,
+    'receipts', v_receipts,
+    'receiptsTotal', v_receipts_total,
+    'items', v_items,
+    'itemsTotal', v_items_total,
+    'suppliers', v_suppliers,
+    'paymentBreakdown', v_payment,
+    'flags', jsonb_build_object(
+      'stockInOnly', true,
+      'multiCurrency', jsonb_array_length(v_by_currency) > 1,
+      'receiptsTruncated', v_receipts_total > 500,
+      'itemsTruncated', v_items_total > 1000
+    )
+  );
+end;
+$$;
+
+comment on function public.ledger_purchase_report(text, date, date) is
+  'v1 買貨報表：shopId→shop_users.external_shop_id→receipts.user_id；聚合行 SQL GROUP BY（唔返原始行）；明細截 500；payment 由 raw_ocr_data 正規化。';
+
+-- 安全：只畀 service_role（route 用嘅 client）執行；唔畀 anon/authenticated 經 PostgREST 直接叫（繞過 HMAC）
+revoke all on function public.ledger_purchase_report(text, date, date) from public, anon, authenticated;
+grant execute on function public.ledger_purchase_report(text, date, date) to service_role;
+revoke all on function public.norm_payment_method(text) from public, anon, authenticated;
+grant execute on function public.norm_payment_method(text) to service_role;
+revoke all on function public.payment_method_label(text) from public, anon, authenticated;
+grant execute on function public.payment_method_label(text) to service_role;
