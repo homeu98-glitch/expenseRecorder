@@ -176,6 +176,8 @@ begin
   ) p;
 
   -- items[] 聚合（name + currency；unit 取 quantity_unit 代表值；截 1000；含環比 direction）
+  -- 🔴 v1.1 修正：中層必須 project 出 g.rn，否則外層 WHERE rn<=1000 會報 42703 "column rn does not exist"
+  --    （未綁 shop 時 found:false 早返回唔會觸發；一有綁定就炸 → route 503 upstream_unavailable）
   select coalesce(jsonb_agg(jsonb_build_object(
     'name', name, 'unit', unit, 'currency', currency,
     'totalQuantity', total_quantity, 'totalAmount', total_amount,
@@ -186,7 +188,7 @@ begin
   into v_items
   from (
     select g.name, g.currency, g.total_quantity, g.total_amount, g.line_count, g.last_purchase_date,
-           g.unit,
+           g.unit, g.rn,
            case when g.prev_avg is null or g.prev_avg = 0 then 'new'
                 when g.cur_avg > g.prev_avg then 'up'
                 when g.cur_avg < g.prev_avg then 'down' else 'same' end as direction,
