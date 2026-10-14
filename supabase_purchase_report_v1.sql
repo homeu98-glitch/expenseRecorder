@@ -3,18 +3,35 @@
 -- 執行位置：expenseRecorder Supabase 專案 SQL Editor
 --   https://supabase.com/dashboard/project/fjvfvpedklhdenavbcjg → SQL Editor
 -- 對應契約：expenseRecorder/docs/LEDGER_PURCHASE_REPORT_API.md (v1 定稿)
--- 冪等：create or replace，可重複執行。無 trigger／無預聚合表（v1 即時 GROUP BY）。
+-- 冪等：create or replace / add column if not exists，可重複執行。無 trigger／無預聚合表。
 --
--- 資料來源（已對齊 expenseRecorder 真實 schema）：
---   shopId (Ledger merchants.id) → shop_users.external_shop_id → shop_users.id → receipts.user_id
---   receipts.receipt_type='stock_in' 先篩；
---   payment_method / payment_status / input_method / receipt_number 係 raw_ocr_data JSONB 頂層 key；
---   receipt_items 冇 unit 欄 ⇒ items.unit 回 null（契約 §6.3 降級）；
---   supplier = merchants.name（經 receipts.merchant_id join）。
---   聚合全部行 SQL GROUP BY（唔返原始單據行，避 1000 行截斷）；明細層 receipts[] 截 500。
+-- 🔴 已對齊「線上真實 schema」（用 PostgREST 實查，非 schema 檔；schema_v2.sql 從未套用）：
+--   shop_users   : id, shop_name, login_id, login_pin, created_at            （原無 external_shop_id，本腳本下方補上）
+--   receipts     : id, user_id, merchant_id, total_amount, currency,
+--                  receipt_date, image_url, raw_ocr_data, created_at
+--                  （無 receipt_type／category 欄位；category 在 raw_ocr_data 內）
+--   receipt_items: id, receipt_id, user_id, name, quantity, quantity_unit,
+--                  unit_price, total_price, created_at（無 product_key／is_stock_item）
+--   merchants    : id, name, address, user_id
+--   ※ expenseRecorder 全部 receipts 都係買貨單（無 stock_in/其他類型之分），故不過濾類型。
+--   ※ payment_method / payment_status / input_method / receipt_number / category
+--     全部在 raw_ocr_data JSONB 頂層。
+--
+-- shopId 映射（契約 §0/§5）：
+--   Ledger merchants.id → shop_users.external_shop_id → shop_users.id → receipts.user_id
+--   ⚠️ 線上 shop_users.external_shop_id 原本不存在，且全部 11 家店為 NULL。
+--      本腳本會補上該欄位，但「哪個 Ledger merchant.id 對應哪間 expenseRecorder 店」
+--      需另外綁定（見 _bind 註解）；未綁定 → found=false → 404 shop_not_found（誠實拒絕）。
 -- ============================================================
 
--- 支付方式正規化（契約 §6.2 白名單：舊資料可能存中文）
+-- ── 0) 補齊 v2 映射欄位（線上從未套用 schema_v2.sql）──────────────────
+alter table public.shop_users add column if not exists external_shop_id text unique;
+alter table public.shop_users add column if not exists external_owner_id text;
+-- 綁定範例（把 Ledger 的 merchants.id 綁去對應店；把 '...' 換成實際值）：
+-- update public.shop_users set external_shop_id = '8291f843-9def-4956-9d0b-1cfef2598306'
+--  where shop_name = '快宅';
+
+-- ── 支付方式正規化（契約 §6.2 白名單；線上實測值已如 on_delivery/paid/pos_manual）──
 create or replace function public.norm_payment_method(raw text) returns text
 language sql immutable as $$
   select case
@@ -79,7 +96,7 @@ begin
   v_from := coalesce(p_from, v_to);
   if v_from > v_to then v_from := v_to; end if;
 
-  -- shopId → shop_users.id（契約 §0/§5）
+  -- shopId → shop_users.id（external_shop_id 為 NULL/未綁定 ⇒ found=false）
   select id into v_user_id from shop_users where external_shop_id = p_shop_id;
   v_found := v_user_id is not null;
   if not v_found then
@@ -89,12 +106,12 @@ begin
   -- range-level 計數
   select count(*) into v_receipts_total
   from receipts r
-  where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to;
+  where r.user_id = v_user_id and r.receipt_date between v_from and v_to;
 
   select count(*) into v_item_line_count
   from receipt_items it
   join receipts r on r.id = it.receipt_id
-  where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to;
+  where r.user_id = v_user_id and r.receipt_date between v_from and v_to;
 
   -- KPI.byCurrency
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -105,7 +122,7 @@ begin
   from (
     select r.currency, count(*) receipt_count, sum(r.total_amount) total_amount
     from receipts r
-    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    where r.user_id = v_user_id and r.receipt_date between v_from and v_to
     group by r.currency
   ) a;
 
@@ -118,7 +135,7 @@ begin
   from (
     select r.receipt_date, r.currency, count(*) receipt_count, sum(r.total_amount) total_amount
     from receipts r
-    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    where r.user_id = v_user_id and r.receipt_date between v_from and v_to
     group by r.receipt_date, r.currency
   ) a;
 
@@ -133,14 +150,14 @@ begin
            count(*) receipt_count, sum(r.total_amount) total_amount
     from receipts r
     left join merchants m on m.id = r.merchant_id
-    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    where r.user_id = v_user_id and r.receipt_date between v_from and v_to
     group by m.name, r.merchant_id, r.currency
   ) s;
 
   select count(distinct r.merchant_id) into v_supplier_count
   from receipts r
-  where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
-    and r.merchant_id is not null;
+  where r.user_id = v_user_id and r.merchant_id is not null
+    and r.receipt_date between v_from and v_to;
 
   -- paymentBreakdown[]（正規化 method + label, currency）
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -154,13 +171,13 @@ begin
       payment_method_label(r.raw_ocr_data->>'payment_method') as label,
       r.currency, count(*) receipt_count, sum(r.total_amount) total_amount
     from receipts r
-    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    where r.user_id = v_user_id and r.receipt_date between v_from and v_to
     group by method, label, r.currency
   ) p;
 
-  -- items[] 聚合（name + currency；unit 冇欄 ⇒ null；升跌 vs 區間前；截 1000）
+  -- items[] 聚合（name + currency；unit 取 quantity_unit 代表值；截 1000；含環比 direction）
   select coalesce(jsonb_agg(jsonb_build_object(
-    'name', name, 'unit', null, 'currency', currency,
+    'name', name, 'unit', unit, 'currency', currency,
     'totalQuantity', total_quantity, 'totalAmount', total_amount,
     'avgUnitPrice', case when total_quantity > 0 then round(total_amount / total_quantity, 2) else 0 end,
     'lineCount', line_count, 'lastPurchaseDate', last_purchase_date,
@@ -169,6 +186,7 @@ begin
   into v_items
   from (
     select g.name, g.currency, g.total_quantity, g.total_amount, g.line_count, g.last_purchase_date,
+           g.unit,
            case when g.prev_avg is null or g.prev_avg = 0 then 'new'
                 when g.cur_avg > g.prev_avg then 'up'
                 when g.cur_avg < g.prev_avg then 'down' else 'same' end as direction,
@@ -181,12 +199,13 @@ begin
         sum(it.total_price) as total_amount,
         count(*) as line_count,
         max(r.receipt_date)::text as last_purchase_date,
+        nullif(min(nullif(it.quantity_unit, '')), '') as unit,
         case when sum(it.quantity) > 0 then sum(it.total_price) / sum(it.quantity) else null end as cur_avg,
         (
           select case when sum(it2.quantity) > 0 then sum(it2.total_price) / sum(it2.quantity) else null end
           from receipt_items it2
           join receipts r2 on r2.id = it2.receipt_id
-          where r2.user_id = v_user_id and r2.receipt_type = 'stock_in'
+          where r2.user_id = v_user_id
             and r2.receipt_date < v_from
             and lower(btrim(it2.name)) = lower(btrim(it.name))
             and r2.currency = r.currency
@@ -194,7 +213,7 @@ begin
         row_number() over (order by sum(it.total_price) desc) as rn
       from receipt_items it
       join receipts r on r.id = it.receipt_id
-      where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+      where r.user_id = v_user_id and r.receipt_date between v_from and v_to
       group by it.name, r.currency
     ) g
   ) ranked
@@ -203,17 +222,16 @@ begin
   select count(*) into v_items_total from (
     select 1 from receipt_items it
     join receipts r on r.id = it.receipt_id
-    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    where r.user_id = v_user_id and r.receipt_date between v_from and v_to
     group by it.name, r.currency
   ) s;
 
-  -- receipts[] 明細（新→舊，截 500；item.unit = null；絕不回 raw_ocr_data）
+  -- receipts[] 明細（新→舊，截 500；絕不回 raw_ocr_data / image_url）
   select coalesce(jsonb_agg(jsonb_build_object(
     'receiptId', id,
     'receiptNumber', receipt_number,
     'receiptDate', to_char(receipt_date, 'YYYY-MM-DD'),
     'recordedAt', created_at,
-    'receiptType', receipt_type,
     'category', category,
     'supplierName', supplier_name,
     'supplierId', merchant_id,
@@ -227,25 +245,24 @@ begin
   into v_receipts
   from (
     select
-      r.id, r.receipt_date, r.created_at, r.receipt_type, r.category,
-      r.merchant_id, r.currency, r.total_amount,
+      r.id, r.receipt_date, r.created_at, r.merchant_id, r.currency, r.total_amount,
       m.name as supplier_name,
       r.raw_ocr_data->>'receipt_number' as receipt_number,
+      r.raw_ocr_data->>'category' as category,
       r.raw_ocr_data->>'payment_status' as payment_status,
       r.raw_ocr_data->>'input_method' as input_method,
       norm_payment_method(r.raw_ocr_data->>'payment_method') as payment_method_norm,
       (
         select coalesce(jsonb_agg(jsonb_build_object(
           'lineId', i.id, 'name', i.name, 'quantity', i.quantity,
-          'unit', null, 'unitPrice', i.unit_price, 'totalPrice', i.total_price,
-          'productKey', i.product_key, 'isStockItem', i.is_stock_item
+          'unit', nullif(i.quantity_unit, ''), 'unitPrice', i.unit_price, 'totalPrice', i.total_price
         ) order by i.id), '[]'::jsonb)
         from receipt_items i where i.receipt_id = r.id
       ) as items_json,
       row_number() over (order by r.receipt_date desc, r.id desc) as rn
     from receipts r
     left join merchants m on m.id = r.merchant_id
-    where r.user_id = v_user_id and r.receipt_type = 'stock_in' and r.receipt_date between v_from and v_to
+    where r.user_id = v_user_id and r.receipt_date between v_from and v_to
     order by r.receipt_date desc, r.id desc
     limit 501
   ) base
@@ -285,7 +302,7 @@ end;
 $$;
 
 comment on function public.ledger_purchase_report(text, date, date) is
-  'v1 買貨報表：shopId→shop_users.external_shop_id→receipts.user_id；聚合行 SQL GROUP BY（唔返原始行）；明細截 500；payment 由 raw_ocr_data 正規化。';
+  'v1 買貨報表：shopId→shop_users.external_shop_id→receipts.user_id；對齊線上真實 schema；聚合行 SQL GROUP BY；明細截 500；payment 由 raw_ocr_data 正規化。';
 
 -- 安全：只畀 service_role（route 用嘅 client）執行；唔畀 anon/authenticated 經 PostgREST 直接叫（繞過 HMAC）
 revoke all on function public.ledger_purchase_report(text, date, date) from public, anon, authenticated;
