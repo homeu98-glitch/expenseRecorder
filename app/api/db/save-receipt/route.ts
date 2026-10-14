@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       input_method,
       date,
       total_amount,
+      currency,
       items,
       image_data_url,
       image_url,
@@ -79,17 +80,43 @@ export async function POST(request: Request) {
       }
     }
 
+    /*
+     * 幣值：**唯一真源規則**（同 macau-pos `normalizeReceiptCurrency` 完全一致）。
+     * 有值 → trim + 大寫；空／未提供 → `'MOP'`（唔可以落 null，否則跌返 DB default 'HKD'）。
+     */
+    const currencyStr = String(currency ?? "").trim()
+      ? String(currency).trim().toUpperCase()
+      : "MOP";
+
     const receiptPayload = {
       user_id: userId,
       merchant_id: merchant.id,
       total_amount: total_amount,
       receipt_date: date,
+      /*
+       * 🔴 2026-10-14：`currency` 一定要寫 **頂層欄**。
+       *
+       * 呢個欄（`receipts.currency`，schema default `'HKD'`）本來冇任何寫入端寫過
+       * ⇒ 全庫每一行都係 DB default `'HKD'`。而 Ledger 買貨報表 RPC
+       * （`supabase_purchase_report_v1.sql`，group by `r.currency`）讀嘅正正係佢
+       * ⇒ 表嫂美食區間內 97 張單全部被報成「只有 HKD」，其中 31 張真值係 MOP、
+       *   1 張係 RMB 都被覆蓋（MOP→HKD 差約 3%，屬帳目正確性問題）。
+       *
+       * 語意：呼叫端有提供就用（統一 trim + 大寫）；未提供 ⇒ 落 `'MOP'`
+       * 降級 —— 同 macau-pos 讀取端（`getRaw("currency") || "MOP"`、
+       * `normalizeReceiptCurrency`）用**同一個規則**，避免兩個消費者又分叉。
+       * ⚠️ 唔可以留空／落 null：留空就會又跌返 DB default `'HKD'`。
+       */
+      currency: currencyStr,
       image_url: savedImagePath,
       raw_ocr_data: {
         receipt_number: receipt_number || null,
         payment_method: payment_method || "on_delivery",
         payment_status: payment_status || "unpaid",
         input_method: input_method || "unknown",
+        // 🔴 2026-10-14：同頂層 `currency` 寫**同一個值**（同一條規則，見上）。
+        // 呢個 key 係 macau-pos 收帳清單／品項分析嘅顯示來源，兩邊唔可以再分叉。
+        currency: currencyStr,
         item_metadata: (Array.isArray(items) ? (items as ReceiptItemInput[]) : []).map((item) => ({
           name: item.name,
           quantity_unit: item.quantity_unit || "unit",
