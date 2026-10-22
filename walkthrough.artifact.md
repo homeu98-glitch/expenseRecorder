@@ -16,7 +16,7 @@ I have successfully built the **Expense Recorder** website as a mobile-first Nex
 
 ### 3. Smart Data Management
 - **Supabase Integration**: Robust storage for receipts and itemized data.
-- **60-Day Retention**: Automated cleanup logic for images older than 60 days to save space.
+- **永久保留（無保留期）**：2026-10-22 移除舊版 60/90 天自動清理邏輯（`app/api/cron/cleanup`）同首頁「只保留 90 天」提示；單據同圖片永久保存，備份靠設定頁「匯出數據 (CSV)」。
 - **Easy Editing**: User-friendly interface to manually adjust or verify AI results.
 
 ## Verification Results

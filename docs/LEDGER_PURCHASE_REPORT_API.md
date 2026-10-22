@@ -65,7 +65,8 @@ GET https://<expense-recorder 域名>/api/integration/ledger/purchase-report
 
 `from`／`to` **唔設 90 日（或任何）上限**。可以查全年、三年、全歷史。
 
-⚠️ 咁樣 payload 會爆，所以要**分層**（見 §4）：**聚合層永不截斷，明細層有上限**。
+⚠️ 咁樣 payload 會爆，所以要**分層**（見 §4）：**聚合層永不截斷，明細層亦都唔截斷**
+（2026-10-22 J 拍板解除 500 張／1000 款上限；實查全庫 1,189 張、最大店 858 張，payload ~260KB 完全安全）。
 詳細規則 → §4。
 
 ---
@@ -169,7 +170,7 @@ GET https://<expense-recorder 域名>/api/integration/ledger/purchase-report
       ]
     }
   ],
-  "receiptsTotal": 12,      // 區間內單據總數（receipts[] 可能被截斷，權威喺呢個數）
+  "receiptsTotal": 12,      // 區間內單據總數（2026-10-22 起 receipts[] 唔再截斷，= receipts.length）
 
   // ── 品項聚合（合併鍵＝品名+單位+幣別，見 §7）──
   "items": [
@@ -201,16 +202,16 @@ GET https://<expense-recorder 域名>/api/integration/ledger/purchase-report
   "flags": {
     "stockInOnly": true,      // 本版恆 true：只回買貨單（receipt_type='stock_in'），見 §8
     "multiCurrency": true,    // 本版恆 true：幣別會混用，聚合全部按幣別分開，見 §7
-    "receiptsTruncated": false,
-    "itemsTruncated": false
+    "receiptsTruncated": false,  // 🔴 2026-10-22 起恆 false：明細層已解除截斷上限（§4.3）
+    "itemsTruncated": false      // 🔴 2026-10-22 起恆 false（key 保留維持契約形狀）
   }
 }
 ```
 
-⚠️ **聚合 vs 明細嘅分別（時間無上限後最重要嘅一點）**：
+⚠️ **聚合 vs 明細嘅分別**：
 `kpi` / `daily` / `suppliers` / `paymentBreakdown` / `items` **永遠覆蓋完整查詢區間，永遠唔截斷** ——
 所以「今年買咗幾多錢、邊間供應商最貴、邊款料最貴」呢啲問題，**查三年都係準嘅**。
-只有 `receipts[]`（逐張單據明細）會因 payload 太大而截斷 ⇒ 見 §4。
+`receipts[]`（逐張單據明細）**2026-10-22 起同樣唔截斷**（舊版 500 張上限已解除）⇒ 見 §4。
 
 ### 3.2 失敗
 
@@ -263,26 +264,32 @@ GET https://<expense-recorder 域名>/api/integration/ledger/purchase-report
 | 層 | keys | 覆蓋範圍 | 會否截斷 |
 | --- | --- | --- | --- |
 | **聚合層** | `kpi` / `daily` / `suppliers` / `paymentBreakdown` / `items` | **完整 `from`→`to`，100% 準** | **永不截斷** |
-| **明細層** | `receipts[]`（含每張 `items[]`） | 最近 N 張 | 可能截斷，見 4.3 |
+| **明細層** | `receipts[]`（含每張 `items[]`） | **完整 `from`→`to`** | **永不截斷**（2026-10-22 起） |
 
-⇒ 「查三年買咗幾多錢／邊間供應商最貴／邊款料最貴」**永遠準確**，唔受明細截斷影響。
+⇒ 「查三年買咗幾多錢／邊間供應商最貴／邊款料最貴／逐張單據」**永遠準確**。
 
-### 4.3 明細層上限（唯一權威在 DB 端）
+### 4.3 明細層上限（🔴 2026-10-22 已解除）
 
-| 項目 | 上限 | 行為 |
+| 項目 | 舊上限（已廢） | 而家行為 |
 | --- | --- | --- |
-| `receipts[]` | **500 張**（新→舊） | 超出就唔回，`flags.receiptsTruncated = true`，`receiptsTotal` 仍係真實總數 |
-| 單張 `items[]` | 唔設上限（單張通常十幾行） | — |
-| `items[]`（品項聚合） | **1000 款**（按總額降序） | 超出就唔回，`flags.itemsTruncated = true`，`itemsTotal` 仍係真實總數 |
+| `receipts[]` | ~~500 張~~ | **唔截斷**，回傳區間內全部；`flags.receiptsTruncated` 恆 `false` |
+| 單張 `items[]` | 一向唔設上限 | 不變 |
+| `items[]`（品項聚合） | ~~1000 款~~ | **唔截斷**，回傳區間內全部；`flags.itemsTruncated` 恆 `false` |
 
-🔴 **截斷嘅唯一權威係 DB 端**。route **只可以照抄** `flags.*Truncated`，**唔可以自己再截一次**
-（2026-09-25 POS 側曾經犯過：route 先截 → DB 收到嘅已經喺範圍內 → `clamped` 對唔上 → 全部 503）。
+解除前實查（2026-10-22）：全庫 1,189 張、最大店 858 張 ⇒ 舊上限下查全歷史必定截斷。
+解除後 payload ~260KB，安全。SQL：`supabase_purchase_report_uncap_v1.sql`。
 
-### 4.4 分頁（v1 **唔提供**，v2 加）
+⚠️ 若日後單店超過 ~5,000 張／區間，要先做分頁（§4.4）再放量，**唔好靜雞雞加返截斷**。
 
-J 拍板「500 張夠，唔夠就分頁」⇒ **v1 唔加 `offset`／`cursor`**（少一樣就少一個錯嘅機會）。
+🔴 **（歷史教訓，仍然有效）截斷嘅唯一權威只可以喺 DB 端**。route **只可以照抄** `flags.*Truncated`，
+**唔可以自己再截一次**（2026-09-25 POS 側曾經犯過：route 先截 → DB 收到嘅已經喺範圍內 → `clamped` 對唔上 → 全部 503）。
 
-如果將來真係要：
+### 4.4 分頁（v1 **唔提供**）
+
+2026-10-11 原本拍板「500 張夠，唔夠就分頁」；**2026-10-22 J 改為直接解除上限**（體量實查過，見 §4.3）
+⇒ **v1 仍然唔加 `offset`／`cursor`**（少一樣就少一個錯嘅機會）。
+
+如果將來真係要（觸發條件：單店／單區間 > ~5,000 張）：
 
 - 會加**游標分頁**（`cursor` = 最後一張嘅 `(receipt_date, receipt_id)`），**唔會**用 `offset`
   （offset 喺新單插入時會漏單／重單）
@@ -290,11 +297,13 @@ J 拍板「500 張夠，唔夠就分頁」⇒ **v1 唔加 `offset`／`cursor`**�
   **每次都係完整區間**（唔會因為分頁而變成「只得一頁嘅統計」）
 - `receiptsTotal` **每頁都係真實總數**（唔係「截至呢頁」）
 
-### 4.5 Ledger 拿到 `truncated: true` 點做
+### 4.5 Ledger 拿到 `truncated` flag 點做
 
-1. **唔可以**顯示「總數」當成「已列出嘅張數」——兩個數唔一樣（`receiptsTotal` vs `receipts.length`）
-2. UI 要顯示「只顯示最近 500 張，共 X 張」，並**提議收窄日期範圍**
-3. 分析功能（KPI／圖表／排行）**照用聚合層**，唔受影響
+2026-10-22 起兩個 flag **恆 false**（key 保留係為咗契約形狀穩定）。Ledger 照舊讀：
+
+1. `flags.receiptsTruncated === false` ⇒ `receipts.length === receiptsTotal`，可以放心顯示「共 X 張」
+2. **唔可以**顯示「總數」當成「已列出嘅張數」——兩個數唔一樣（`receiptsTotal` vs `receipts.length`）
+3. 分析功能（KPI／圖表／排行）**照用聚合層**
 
 ---
 

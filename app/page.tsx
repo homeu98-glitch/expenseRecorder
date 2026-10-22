@@ -11,6 +11,7 @@ import { getShopUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import { playPaidSound } from "@/lib/feedback";
+import { fetchAllRows } from "@/lib/fetch-all-rows";
 import {
   buildTrendSummary,
   filterReceiptsByDate,
@@ -42,22 +43,25 @@ export default function Home() {
   const fetchDashboardData = async (userId: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .select(`
-          id,
-          total_amount,
-          receipt_date,
-          created_at,
-          raw_ocr_data,
-          merchants(name),
-          receipt_items(id, name, quantity, unit_price, total_price, created_at)
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      // 🔴 max-rows=1000：單店超過 1,000 張都會靜默截斷 ⇒ 分批拉
+      const receipts = await fetchAllRows(() =>
+        supabase
+          .from('receipts')
+          .select(`
+            id,
+            total_amount,
+            receipt_date,
+            created_at,
+            raw_ocr_data,
+            merchants(name),
+            receipt_items(id, name, quantity, unit_price, total_price, created_at)
+          `)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+      );
 
-      if (error) throw error;
-      setReceipts(normalizeReportReceipts(data));
+      setReceipts(normalizeReportReceipts(receipts));
     } catch (err) {
       console.error(err);
     } finally {
@@ -150,13 +154,6 @@ export default function Home() {
               {user.shop_name[0]}
             </div>
           </Link>
-        </div>
-
-        <div className="card p-4 border-amber-200 bg-amber-50/70">
-          <div className="text-sm font-black text-amber-700">提示</div>
-          <div className="text-xs text-amber-700 mt-1">
-            單據資料與圖片目前只保留 90 天，請在期限內完成檢查、匯出或備份。
-          </div>
         </div>
 
         {/* Time Range Selector */}

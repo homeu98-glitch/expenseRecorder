@@ -10,6 +10,7 @@ import ConfettiBurst from "@/components/ConfettiBurst";
 import { playPaidSound } from "@/lib/feedback";
 import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labels";
 import { normalizeReportReceipts, type ReportReceipt } from "@/lib/reporting";
+import { fetchAllRows } from "@/lib/fetch-all-rows";
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams();
@@ -25,22 +26,25 @@ export default function PaymentsPage() {
   async function loadReceipts(userId: string) {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("receipts")
-        .select(`
-          id,
-          total_amount,
-          receipt_date,
-          created_at,
-          raw_ocr_data,
-          merchants(name),
-          receipt_items(id, name, quantity, unit_price, total_price, created_at)
-        `)
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+      // 🔴 max-rows=1000：單店超過 1,000 張都會靜默截斷 ⇒ 分批拉
+      const receipts = await fetchAllRows(() =>
+        supabase
+          .from("receipts")
+          .select(`
+            id,
+            total_amount,
+            receipt_date,
+            created_at,
+            raw_ocr_data,
+            merchants(name),
+            receipt_items(id, name, quantity, unit_price, total_price, created_at)
+          `)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+      );
 
-      if (error) throw error;
-      setReceipts(normalizeReportReceipts(data));
+      setReceipts(normalizeReportReceipts(receipts));
     } catch (error) {
       console.error(error);
     } finally {

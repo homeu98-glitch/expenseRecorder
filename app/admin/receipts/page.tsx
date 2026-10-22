@@ -10,6 +10,7 @@ import { getPaymentMethodLabel, getPaymentStatusLabel } from "@/lib/payment-labe
 import { supabase } from "@/lib/supabase";
 import { filterReceiptsByDate, normalizeReportReceipts, type DashboardFilter, type ReportReceipt } from "@/lib/reporting";
 import { loadAllAccountStatuses, type AccountStatus } from "@/lib/account-settings";
+import { fetchAllRows } from "@/lib/fetch-all-rows";
 
 type AdminAccount = {
   id: string;
@@ -35,25 +36,28 @@ export default function AdminReceiptsPage() {
     void (async () => {
       setLoading(true);
       try {
-        const [{ data: accountRows, error: accountError }, { data: receiptRows, error: receiptError }] = await Promise.all([
+        // 🔴 全部單據（全店 scope 已超過 PostgREST max-rows=1000）⇒ 必須分批拉，唔可以裸 select
+        const [{ data: accountRows, error: accountError }, receiptRows] = await Promise.all([
           supabase.from("shop_users").select("id, shop_name, login_id").order("shop_name"),
-          supabase
-            .from("receipts")
-            .select(`
-              id,
-              user_id,
-              total_amount,
-              receipt_date,
-              created_at,
-              raw_ocr_data,
-              merchants(name),
-              receipt_items(id, name, quantity, unit_price, total_price, created_at)
-            `)
-            .order("created_at", { ascending: false }),
+          fetchAllRows(() =>
+            supabase
+              .from("receipts")
+              .select(`
+                id,
+                user_id,
+                total_amount,
+                receipt_date,
+                created_at,
+                raw_ocr_data,
+                merchants(name),
+                receipt_items(id, name, quantity, unit_price, total_price, created_at)
+              `)
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+          ),
         ]);
 
         if (accountError) throw accountError;
-        if (receiptError) throw receiptError;
 
         const visibleAccounts = (accountRows ?? []).filter((account) => account.login_id !== "60000000");
         const statuses = await loadAllAccountStatuses(visibleAccounts.map((account) => account.id));

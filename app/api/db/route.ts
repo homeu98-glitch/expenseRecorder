@@ -7,6 +7,7 @@ import {
   normalizeReportReceipts,
   type DashboardFilter,
 } from '@/lib/reporting';
+import { fetchAllRows } from '@/lib/fetch-all-rows';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -20,21 +21,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
-      .from('receipts')
-      .select(`
-        id,
-        total_amount,
-        receipt_date,
-        created_at,
-        raw_ocr_data,
-        merchants(name),
-        receipt_items(id, name, quantity, unit_price, total_price, created_at)
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
+    // 🔴 max-rows=1000：單店超過 1,000 張都會靜默截斷 ⇒ 分批拉
+    const data = await fetchAllRows(() =>
+      supabase
+        .from('receipts')
+        .select(`
+          id,
+          total_amount,
+          receipt_date,
+          created_at,
+          raw_ocr_data,
+          merchants(name),
+          receipt_items(id, name, quantity, unit_price, total_price, created_at)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+    );
 
     const receipts = filterReceiptsByDate(normalizeReportReceipts(data), filter);
 

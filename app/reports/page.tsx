@@ -26,6 +26,7 @@ import {
   type DashboardFilter,
   type ReportReceipt,
 } from "@/lib/reporting";
+import { fetchAllRows } from "@/lib/fetch-all-rows";
 
 const PIE_COLORS = ['#1a73e8', '#34a853', '#fbbc05', '#ea4335', '#7c3aed', '#0891b2'];
 
@@ -59,22 +60,25 @@ export default function ReportsPage() {
       setLoading(true);
       setError(null);
       try {
-        const { data, error: queryError } = await supabase
-          .from('receipts')
-          .select(`
-            id,
-            total_amount,
-            receipt_date,
-            created_at,
-            raw_ocr_data,
-            merchants(name),
-            receipt_items(id, name, quantity, unit_price, total_price, created_at)
-          `)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+        // 🔴 max-rows=1000：單店超過 1,000 張都會靜默截斷 ⇒ 分批拉
+        const receipts = await fetchAllRows(() =>
+          supabase
+            .from('receipts')
+            .select(`
+              id,
+              total_amount,
+              receipt_date,
+              created_at,
+              raw_ocr_data,
+              merchants(name),
+              receipt_items(id, name, quantity, unit_price, total_price, created_at)
+            `)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
+        );
 
-        if (queryError) throw queryError;
-        setReceipts(normalizeReportReceipts(data));
+        setReceipts(normalizeReportReceipts(receipts));
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : '載入報表失敗');
       } finally {

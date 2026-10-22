@@ -16,6 +16,7 @@ import {
   type ShopPresets,
 } from "@/lib/account-settings";
 import { downloadCsv } from "@/lib/csv";
+import { fetchAllRows } from "@/lib/fetch-all-rows";
 
 export default function SettingsPage() {
   const [user] = useState<{ id: string; shop_name: string; login_id: string; role?: string } | null>(() => getShopUser());
@@ -46,16 +47,23 @@ export default function SettingsPage() {
     void (async () => {
       try {
         const loaded = await loadShopPresets(user.id);
-        const { data: receipts } = await supabase
-          .from("receipts")
-          .select(`
-            merchants(name),
-            receipt_items(name)
-          `)
-          .eq("user_id", user.id);
+        // 🔴 max-rows=1000：單店超過 1,000 張都會靜默截斷 ⇒ 分批拉
+        const receipts = await fetchAllRows<{
+          merchants: { name?: string } | Array<{ name?: string }> | null;
+          receipt_items: Array<{ name?: string }> | null;
+        }>(() =>
+          supabase
+            .from("receipts")
+            .select(`
+              merchants(name),
+              receipt_items(name)
+            `)
+            .eq("user_id", user.id)
+            .order("id")
+        );
 
         const nextActualProducts = new Map<string, Set<string>>();
-        (receipts ?? []).forEach((receipt) => {
+        receipts.forEach((receipt) => {
           const merchantRelation = receipt.merchants as { name?: string } | Array<{ name?: string }> | null;
           const merchantName = Array.isArray(merchantRelation)
             ? merchantRelation[0]?.name
@@ -174,13 +182,15 @@ export default function SettingsPage() {
   async function deleteGlobalUnit(unit: string) {
     if (user?.role !== "admin") return;
     await removeGlobalUnit(unit);
-    const { data: receipts, error } = await supabase
-      .from("receipts")
-      .select("id, raw_ocr_data");
+    // 🔴 全店 scope（1,189 張 > max-rows=1000）：裸 select 會漏 189 張唔改 ⇒ 必須分批拉
+    const receipts = await fetchAllRows<{ id: string; raw_ocr_data: unknown }>(() =>
+      supabase
+        .from("receipts")
+        .select("id, raw_ocr_data")
+        .order("id")
+    );
 
-    if (error) throw error;
-
-    for (const receipt of receipts ?? []) {
+    for (const receipt of receipts) {
       const raw = typeof receipt.raw_ocr_data === "object" && receipt.raw_ocr_data !== null
         ? receipt.raw_ocr_data as Record<string, unknown>
         : {};
@@ -269,22 +279,32 @@ export default function SettingsPage() {
     if (!user) return;
     setStatus("正在準備匯出數據...");
 
-    const { data, error } = await supabase
-      .from('receipts')
-      .select(`
-        receipt_date,
-        total_amount,
-        merchants(name),
-        receipt_items(name, quantity, unit_price)
-      `)
-      .eq('user_id', user.id);
-
-    if (error) {
-      alert("匯出失敗: " + error.message);
+    // 🔴 max-rows=1000：CSV 備份唔可以靜默截斷 ⇒ 分批拉
+    let receipts;
+    try {
+      receipts = await fetchAllRows<{
+        receipt_date: string;
+        total_amount: number;
+        merchants: { name?: string } | Array<{ name?: string }> | null;
+        receipt_items: Array<{ name?: string; quantity?: number; unit_price?: number }> | null;
+      }>(() =>
+        supabase
+          .from('receipts')
+          .select(`
+            receipt_date,
+            total_amount,
+            merchants(name),
+            receipt_items(name, quantity, unit_price)
+          `)
+          .eq('user_id', user.id)
+          .order("id")
+      );
+    } catch (err) {
+      alert("匯出失敗: " + (err instanceof Error ? err.message : String(err)));
       return;
     }
 
-    const csvRows = (data ?? []).flatMap((receipt) => {
+    const csvRows = receipts.flatMap((receipt) => {
       const merchantRelation = receipt.merchants as { name?: string } | Array<{ name?: string }> | null;
       const merchantName = Array.isArray(merchantRelation) ? merchantRelation[0]?.name : merchantRelation?.name;
       const items = receipt.receipt_items ?? [];
