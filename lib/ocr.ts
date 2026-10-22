@@ -1,6 +1,7 @@
 import { normalizeReceiptDraft, type ReceiptDraft } from "@/lib/receipt";
 import { processReceiptWithGemini } from "@/lib/gemini";
 import { processReceiptWithQwen } from "@/lib/qwen";
+import { processReceiptWithOpenRouter } from "@/lib/openrouter";
 
 type OcrAttemptResult = {
   draft: ReceiptDraft;
@@ -8,12 +9,14 @@ type OcrAttemptResult = {
   model: string;
 };
 
+type OcrProvider = "qwen" | "gemini" | "openrouter";
+
 type OcrStrategyItem = {
-  provider: "qwen" | "gemini";
+  provider: OcrProvider;
   model: string;
 };
 
-const DEFAULT_STRATEGY = "qwen-cheap,gemini-flash,qwen-strong,gemini-strong";
+const DEFAULT_STRATEGY = "openrouter-cheap,gemini-flash,openrouter-strong,qwen-strong";
 
 function getStrategy(): OcrStrategyItem[] {
   const raw = process.env.OCR_FALLBACK_ORDER || DEFAULT_STRATEGY;
@@ -22,15 +25,22 @@ function getStrategy(): OcrStrategyItem[] {
     .map((item) => item.trim())
     .filter(Boolean)
     .map((item) => {
+      // 支援 "openrouter:<model-id>" 明確指定模型（model id 本身含 "/"）
+      if (item.startsWith("openrouter:")) {
+        return { provider: "openrouter" as const, model: item.slice("openrouter:".length).trim() };
+      }
       if (item.startsWith("gemini-")) {
         return { provider: "gemini" as const, model: item.replace("gemini-", "") };
       }
       if (item.startsWith("qwen-")) {
         return { provider: "qwen" as const, model: item.replace("qwen-", "") };
       }
+      if (item.startsWith("openrouter-")) {
+        return { provider: "openrouter" as const, model: item.replace("openrouter-", "") };
+      }
       return null;
     })
-    .filter((item): item is OcrStrategyItem => item !== null);
+    .filter((item): item is OcrStrategyItem => item !== null && Boolean(item.model));
 }
 
 function isUsefulResult(draft: ReceiptDraft) {
@@ -51,6 +61,11 @@ async function runAttempt(
   if (strategy.provider === "qwen") {
     const draft = await processReceiptWithQwen(base64Image, mimeType, strategy.model);
     return { draft: normalizeReceiptDraft(draft), provider: "qwen", model: strategy.model };
+  }
+
+  if (strategy.provider === "openrouter") {
+    const draft = await processReceiptWithOpenRouter(base64Image, mimeType, strategy.model);
+    return { draft: normalizeReceiptDraft(draft), provider: "openrouter", model: strategy.model };
   }
 
   const draft = await processReceiptWithGemini(base64Image, mimeType, strategy.model);
