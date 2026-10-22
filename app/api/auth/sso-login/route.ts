@@ -13,6 +13,31 @@ function pickLoginId({ phone, shopId }: { phone: string | null; shopId: string }
   return (hash.padEnd(8, "0").slice(0, 8)) || "00000000";
 }
 
+/** 核心欄位：缺咩都唔可以喺降級時剔走（剔咗只會換嚟 NOT NULL 錯誤）。 */
+const CORE_COLUMNS = new Set(["shop_name", "login_id", "login_pin"]);
+
+/**
+ * 從 PostgREST 錯誤辨認「缺欄」並拎返欄名（2026-10-22）。
+ *
+ * PostgREST 對不存在嘅欄位：
+ *   · `.insert()` 未知欄 → **PGRST204**「Could not find the 'x' column of
+ *     'shop_users' in the schema cache」
+ *   · 兩種 code 對 `.update()` 都可能出現；原生 Postgres 係 **42703**
+ *     「column "x" of relation "shop_users" does not exist」
+ * 只認 code 唔認訊息會漏（訊息先至帶欄名），所以兩邊都要。
+ */
+function missingColumnName(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+  const e = err as { code?: unknown; message?: unknown };
+  const code = typeof e.code === "string" ? e.code : "";
+  if (code !== "PGRST204" && code !== "42703") return null;
+  const message = typeof e.message === "string" ? e.message : "";
+  const m =
+    message.match(/could not find the '([^']+)' column/i) ??
+    message.match(/column "([^"]+)"(?: of relation "[^"]+")? does not exist/i);
+  return m ? m[1] : null;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -105,58 +130,51 @@ export async function POST(request: Request) {
       displayName: claims.owner?.displayName || claims.full_name || null,
     };
 
-    let savedUser: Record<string, unknown> | null = null;
-    let writeError: { message?: string } | null = null;
+    // ── 寫入 shop_users（2026-10-22 加缺欄／撞 unique 雙重降級）────────────
+    //
+    // 生產 shop_users 由舊 schema 建成，未必有齊 v2 欄位（auth_source 等）：
+    // PostgREST 對缺欄回 **PGRST204**（訊息带欄名）／**42703** ⇒ 逐個剔走再
+    // 重試，唔可以成筆 500（手機版庫存表 QR 對現有店會全爛）。
+    // 另一維：同一間店已有另一條 row 拎住 external_shop_id（多員工店）⇒ 撞
+    // unique（23505）時降級唔寫 external_shop_id，維持改動前行為。
+    //
+    // 核心欄位（shop_name／login_id／login_pin）缺咩都唔剔 —— 剔咗只會換嚟
+    // NOT NULL 錯誤，無意義。
+    const patch: Record<string, unknown> = {
+      shop_name: shopName,
+      login_id: shopUser ? (shopUser.login_id as string) || loginId : loginId,
+      login_pin: (shopUser ? (shopUser.login_pin as string) : "") || randomPin(),
+      external_shop_id: shopId,
+      external_owner_id: externalOwnerId,
+      auth_source: "macau-ledger",
+      profile_json: profileJson,
+      last_login_at: new Date().toISOString(),
+    };
 
-    if (shopUser) {
-      const patch: Record<string, unknown> = {
-        shop_name: shopName,
-        login_id: shopUser.login_id || loginId,
-        login_pin: shopUser.login_pin || randomPin(),
-        external_shop_id: shopId,
-        external_owner_id: externalOwnerId,
-        auth_source: "macau-ledger",
-        profile_json: profileJson,
-        last_login_at: new Date().toISOString(),
-      };
-      let res = await supabase
-        .from("shop_users")
-        .update(patch)
-        .eq("id", shopUser.id)
-        .select("*")
-        .single();
-      // 同一間店已有另一條 row 拎住 external_shop_id（多員工店：第二個員工先至開
-      // 手機版庫存表）⇒ 撞 unique（23505）時降級唔寫 external_shop_id，
-      // 保留 NULL（等於維持本次改動前嘅行為），唔可以令登入失敗。
-      if (res.error && (res.error as { code?: string }).code === "23505") {
-        const patchWithoutShop: Record<string, unknown> = { ...patch };
-        delete patchWithoutShop.external_shop_id;
-        res = await supabase
-          .from("shop_users")
-          .update(patchWithoutShop)
-          .eq("id", shopUser.id)
-          .select("*")
-          .single();
+    const runWrite = () =>
+      shopUser
+        ? supabase.from("shop_users").update(patch).eq("id", shopUser.id).select("*").single()
+        : supabase.from("shop_users").insert(patch).select("*").single();
+
+    let savedUser: Record<string, unknown> | null = null;
+    let writeError: { message?: string; code?: string } | null = null;
+
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const res = await runWrite();
+      savedUser = res.data as Record<string, unknown> | null;
+      writeError = res.error as { message?: string; code?: string } | null;
+      if (!writeError) break;
+
+      const missing = missingColumnName(writeError);
+      if (missing && !CORE_COLUMNS.has(missing) && missing in patch) {
+        delete patch[missing];
+        continue;
       }
-      savedUser = res.data as Record<string, unknown> | null;
-      writeError = res.error as { message?: string } | null;
-    } else {
-      const res = await supabase
-        .from("shop_users")
-        .insert({
-          shop_name: shopName,
-          login_id: loginId,
-          login_pin: randomPin(),
-          external_shop_id: shopId,
-          external_owner_id: externalOwnerId,
-          auth_source: "macau-ledger",
-          profile_json: profileJson,
-          last_login_at: new Date().toISOString(),
-        })
-        .select("*")
-        .single();
-      savedUser = res.data as Record<string, unknown> | null;
-      writeError = res.error as { message?: string } | null;
+      if (writeError.code === "23505" && "external_shop_id" in patch) {
+        delete patch.external_shop_id;
+        continue;
+      }
+      break;
     }
 
     if (writeError || !savedUser) {
