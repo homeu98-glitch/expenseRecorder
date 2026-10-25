@@ -1,6 +1,5 @@
 import { normalizeReceiptDraft, type ReceiptDraft } from "@/lib/receipt";
 import { processReceiptWithGemini } from "@/lib/gemini";
-import { processReceiptWithQwen } from "@/lib/qwen";
 import { processReceiptWithOpenRouter } from "@/lib/openrouter";
 
 type OcrAttemptResult = {
@@ -9,37 +8,48 @@ type OcrAttemptResult = {
   model: string;
 };
 
-type OcrProvider = "qwen" | "gemini" | "openrouter";
+// qwen / Alibaba 已於 2026-10-25 全面停用（key 失效，全部改走 OpenRouter）。
+type OcrProvider = "gemini" | "openrouter";
 
 type OcrStrategyItem = {
   provider: OcrProvider;
   model: string;
 };
 
-const DEFAULT_STRATEGY = "openrouter-cheap,gemini-flash,openrouter-strong,qwen-strong";
+const DEFAULT_STRATEGY = "openrouter-cheap,openrouter-strong";
 
 function parseStrategy(raw: string): OcrStrategyItem[] {
-  return raw
+  const dropped: string[] = [];
+
+  const items = raw
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item) => {
+    .map((item): OcrStrategyItem | null => {
       // 支援 "openrouter:<model-id>" 明確指定模型（model id 本身含 "/"）
       if (item.startsWith("openrouter:")) {
-        return { provider: "openrouter" as const, model: item.slice("openrouter:".length).trim() };
-      }
-      if (item.startsWith("gemini-")) {
-        return { provider: "gemini" as const, model: item.replace("gemini-", "") };
-      }
-      if (item.startsWith("qwen-")) {
-        return { provider: "qwen" as const, model: item.replace("qwen-", "") };
+        return { provider: "openrouter", model: item.slice("openrouter:".length).trim() };
       }
       if (item.startsWith("openrouter-")) {
-        return { provider: "openrouter" as const, model: item.replace("openrouter-", "") };
+        return { provider: "openrouter", model: item.replace("openrouter-", "") };
       }
+      // Gemini 原生為選用 fallback（需自行加入 OCR_FALLBACK_ORDER，見 .env.example）
+      if (item.startsWith("gemini-")) {
+        return { provider: "gemini", model: item.replace("gemini-", "") };
+      }
+      // qwen 及其他 provider 已停用；舊 env 殘留值會落到這裡被安靜丟棄
+      dropped.push(item);
       return null;
     })
     .filter((item): item is OcrStrategyItem => item !== null && Boolean(item.model));
+
+  if (dropped.length > 0) {
+    console.warn(
+      `[ocr] 已忽略不支援的 provider 條目：${dropped.join(", ")}（qwen 已停用，全面改用 OpenRouter；請更新 OCR_FALLBACK_ORDER）`
+    );
+  }
+
+  return items;
 }
 
 /**
@@ -52,6 +62,9 @@ function parseStrategy(raw: string): OcrStrategyItem[] {
  *
  * 因此：只要 `OPENROUTER_API_KEY` 有設定，但解析出來的鏈沒有任何 openrouter 條目，
  * 就自動把 OpenRouter 補回最前面，並印出警告提醒去改 env。
+ *
+ * 註：qwen 已於 2026-10-25 停用，舊 env 殘留的 `qwen-*` 條目會在 parseStrategy 被丟棄，
+ * 所以即使 Vercel env 沒改，也不會再出現 qwen 401。
  */
 function getStrategy(): OcrStrategyItem[] {
   const raw = (process.env.OCR_FALLBACK_ORDER || "").trim();
@@ -87,11 +100,6 @@ async function runAttempt(
   mimeType: string,
   strategy: OcrStrategyItem
 ): Promise<OcrAttemptResult> {
-  if (strategy.provider === "qwen") {
-    const draft = await processReceiptWithQwen(base64Image, mimeType, strategy.model);
-    return { draft: normalizeReceiptDraft(draft), provider: "qwen", model: strategy.model };
-  }
-
   if (strategy.provider === "openrouter") {
     const draft = await processReceiptWithOpenRouter(base64Image, mimeType, strategy.model);
     return { draft: normalizeReceiptDraft(draft), provider: "openrouter", model: strategy.model };
