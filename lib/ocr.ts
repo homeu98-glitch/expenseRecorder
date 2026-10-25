@@ -18,8 +18,7 @@ type OcrStrategyItem = {
 
 const DEFAULT_STRATEGY = "openrouter-cheap,gemini-flash,openrouter-strong,qwen-strong";
 
-function getStrategy(): OcrStrategyItem[] {
-  const raw = process.env.OCR_FALLBACK_ORDER || DEFAULT_STRATEGY;
+function parseStrategy(raw: string): OcrStrategyItem[] {
   return raw
     .split(",")
     .map((item) => item.trim())
@@ -41,6 +40,36 @@ function getStrategy(): OcrStrategyItem[] {
       return null;
     })
     .filter((item): item is OcrStrategyItem => item !== null && Boolean(item.model));
+}
+
+/**
+ * 決定 provider 嘗試順序。
+ *
+ * 自癒邏輯（重要）：部署平台的 `OCR_FALLBACK_ORDER` 環境變數會靜靜覆蓋 code 預設值。
+ * 2026-10-22 與 2026-10-25 兩次事故都是同一個成因——線上 env 仍是舊值
+ * `qwen-cheap,gemini-flash,qwen-strong,gemini-strong`，令 OpenRouter 完全不會被嘗試，
+ * 而 qwen key 過期（401）、gemini 1.5 已下線（404），結果整個 OCR 全掛。
+ *
+ * 因此：只要 `OPENROUTER_API_KEY` 有設定，但解析出來的鏈沒有任何 openrouter 條目，
+ * 就自動把 OpenRouter 補回最前面，並印出警告提醒去改 env。
+ */
+function getStrategy(): OcrStrategyItem[] {
+  const raw = (process.env.OCR_FALLBACK_ORDER || "").trim();
+  const parsed = raw ? parseStrategy(raw) : [];
+  const base = parsed.length > 0 ? parsed : parseStrategy(DEFAULT_STRATEGY);
+
+  const hasOpenRouterKey = Boolean(process.env.OPENROUTER_API_KEY);
+  const hasOpenRouterEntry = base.some((item) => item.provider === "openrouter");
+
+  if (hasOpenRouterKey && !hasOpenRouterEntry) {
+    console.warn(
+      "[ocr] OCR_FALLBACK_ORDER 沒有任何 openrouter 條目，但 OPENROUTER_API_KEY 已設定 → " +
+        "自動補回 openrouter-cheap / openrouter-strong 於最前。請到 Vercel 修正該環境變數。"
+    );
+    return [...parseStrategy("openrouter-cheap,openrouter-strong"), ...base];
+  }
+
+  return base;
 }
 
 function isUsefulResult(draft: ReceiptDraft) {

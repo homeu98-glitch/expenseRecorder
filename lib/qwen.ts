@@ -80,6 +80,13 @@ export async function processReceiptWithQwen(base64Image: string, mimeType: stri
     return normalizeReceiptDraft(parsed);
   } catch (err: unknown) {
     console.error("Alibaba Qwen OCR Error:", err);
+    const status = (err as { status?: number })?.status;
+    if (status === 401) {
+      throw new Error(
+        "qwen:401 Aliyun API key 無效或已過期（Invalid API-key provided）。" +
+          "請更新 ALIBABA_API_KEY，或把 qwen 從 OCR_FALLBACK_ORDER 移除。"
+      );
+    }
     throw err instanceof Error ? err : new Error("AI 識別失敗");
   }
 }
