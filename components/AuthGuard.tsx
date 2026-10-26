@@ -10,7 +10,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const user = getShopUser();
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/sso";
-  const isPublicPage = pathname === "/homepage";
+  const isPublicPage =
+    pathname === "/homepage" || pathname.startsWith("/homepage/");
   const isAdminPage = pathname.startsWith("/admin");
 
   useEffect(() => {

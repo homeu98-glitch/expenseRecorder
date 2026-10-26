@@ -1,4 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import "./site.css";
+import { SiteNav } from "@/components/homepage/SiteNav";
+import { SiteFooter } from "@/components/homepage/SiteFooter";
+import { Reveal } from "@/components/homepage/Reveal";
+import { MERCHANT_TOTAL } from "@/lib/ledger-merchants";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -6,9 +11,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "澳門會員通 · 收銀、會員、掃碼點餐一站式平台",
-  description:
-    "澳門本地免費開店平台。免佣金、不抽成，支援廚房打印、KDS 後廚屏、掃碼點餐，沿用你現有嘅打印機同平板。會員通 App 永久免月費。",
+  title: "澳門會員通 · 收銀、出餐、會員一站式平台",
+  description: `澳門本地商戶數碼化平台：收銀系統負責前線收銀與後廚出餐，澳門會員通線上負責會員儲值與線上點餐。免佣金、不抽成，沿用現有打印機與平板，斷網照收。已連接 ${MERCHANT_TOTAL} 家澳門商戶。`,
   keywords: [
     "澳門 POS",
     "澳門收銀系統",
@@ -17,11 +21,12 @@ export const metadata: Metadata = {
     "廚房打印",
     "KDS 後廚屏",
     "澳門會員通",
+    "澳門會員通線上",
   ],
   openGraph: {
-    title: "澳門會員通 · 由收銀到會員，一套系統搞掂",
+    title: "澳門會員通 · 收銀、出餐、會員一套搞掂",
     description:
-      "免佣金、不抽成。廚房打印、KDS 後廚屏、掃碼點餐，沿用你現有設備。會員通 App 永久免月費。",
+      "免佣金、不抽成。廚房打印、KDS 後廚屏、掃碼點餐、會員儲值，沿用你現有設備。首半年免費。",
     type: "website",
     locale: "zh_MO",
   },
@@ -30,5 +35,12 @@ export const metadata: Metadata = {
 export default function HomepageLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <>{children}</>;
+  return (
+    <div className="s-root">
+      <SiteNav />
+      <div>{children}</div>
+      <SiteFooter />
+      <Reveal />
+    </div>
+  );
 }

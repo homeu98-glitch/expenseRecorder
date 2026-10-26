@@ -1,0 +1,988 @@
+// 由 tools/_scrape-ledger-merchants.mjs 抓取 macau-ledger 公開商家目錄產生（2026-10-26）
+// 更新方法：node tools/_scrape-ledger-merchants.mjs 後重跑產生器
+export type LedgerMerchant = {
+  id: string;
+  name: string;
+  category: string;
+  area: string;
+  address: string;
+  desc: string;
+  tags: string[];
+  logo: string;
+};
+
+const ALL_MERCHANTS: LedgerMerchant[] = [
+  {
+    "id": "8291f843-9def-4956-9d0b-1cfef2598306",
+    "name": "表嫂美食",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 鹽里(爛花園)30號 文英大廈 地下B",
+    "desc": "海鮮大盤雞，鮮味無極。 手打肉餅，顛覆你對肉餅既睇法。",
+    "tags": [
+      "茶餐廳",
+      "外賣",
+      "順德菜"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/8291f843-9def-4956-9d0b-1cfef2598306/logo-d8966e10-99ef-471f-9b79-2d425ef1c576.webp"
+  },
+  {
+    "id": "b86a0d10-9618-4b7c-8569-bcd778ae63bd",
+    "name": "快宅",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 龍嵩正街57號A",
+    "desc": "本店經營13年了 主打手制pizza，意粉，特色葡菜❤️❤️ 營業時間：12:00—22:00 店舖電話：63801028 聯絡地址：龍嵩正街57號A",
+    "tags": [
+      "手制pizza",
+      "意粉",
+      "特色葡菜"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/b86a0d10-9618-4b7c-8569-bcd778ae63bd/logo-6a32e2d4-3489-4141-826f-641e138799c9.webp"
+  },
+  {
+    "id": "4493fdc4-9aa0-4eee-a898-22e0a6841a86",
+    "name": "品味甜點",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 小販巷12號 威通閣 地下B",
+    "desc": "千層蛋糕.梳乎厘.30cm長薯條 營業時間:11:00~20:00 逢星期一休息",
+    "tags": [
+      "千層蛋糕",
+      "梳乎厘",
+      "薯條"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/4493fdc4-9aa0-4eee-a898-22e0a6841a86/logo-9161ff72-1996-44e6-b3fe-b09c7bd5298a.webp"
+  },
+  {
+    "id": "cb9352eb-1f68-4a82-8b4f-9dafce3f0d97",
+    "name": "TN CAFE",
+    "category": "餐飲",
+    "area": "",
+    "address": "區華利街百福大廈3A地下",
+    "desc": "TN CAFE 澳門本土精品咖啡店（Made in Macau）。Espresso、拿鐵、鴛鴦咖啡及茉莉海鹽桂花拿鐵等創意特調；另有檸檬雙柚伯爵、薄荷冰拿鐵等清爽茶咖。輕食招牌開心蛋、牛角窩夫…",
+    "tags": [
+      "咖啡",
+      "特調飲品",
+      "開心蛋"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/cb9352eb-1f68-4a82-8b4f-9dafce3f0d97/logo-ab712190-6711-4225-b246-e867ded15d28.webp"
+  },
+  {
+    "id": "c1f95878-4ae6-4dcc-b3d6-d2cfb4c19b07",
+    "name": "錦繡粥品美食",
+    "category": "餐飲",
+    "area": "黑沙環",
+    "address": "黑沙環第七街萬利樓28號",
+    "desc": "細細品味熬一粥的過程 看得見真材實料,吃得出營養美味 外訂電話:28316090 營業時間:晚上六點至凌晨三點半 地此:澳門黑沙環第七街萬利樓28號地下鋪",
+    "tags": [
+      "錦繡粥品",
+      "黑沙環",
+      "宵夜"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/c1f95878-4ae6-4dcc-b3d6-d2cfb4c19b07/logo-4bf49186-6af1-4b5a-861e-2546cda77803.webp"
+  },
+  {
+    "id": "250db0b4-230a-4297-b5be-d05912d833f9",
+    "name": "是旦小食",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 青洲街13 地鋪M",
+    "desc": "筷子基青洲街的港式宵夜小食，主打「回憶冷撈麵」——透明袋裝冷撈、辣酒凍海鮮同篤魚旦。店舖在跑狗場對面德誠大藥房街口直入；亦會出攤北區市集、嘉年華同節慶活動。 營業時間：17:00–03:00 …",
+    "tags": [
+      "冷撈面",
+      "凍盤辣酒海鮮",
+      "咖哩魚蛋"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/250db0b4-230a-4297-b5be-d05912d833f9/logo-38abd4d0-aef3-4ee2-81f7-d317705a9a10.webp"
+  },
+  {
+    "id": "9233df31-f479-4225-8dbd-83599ec4ab7e",
+    "name": "食得是福咪",
+    "category": "餐飲",
+    "area": "氹仔",
+    "address": "氹仔 地堡街 氹仔街市一樓023-024檔",
+    "desc": "",
+    "tags": [],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/9233df31-f479-4225-8dbd-83599ec4ab7e/logo-84c13d3b-81b5-4279-8ecc-f4127fbe2c01.webp"
+  },
+  {
+    "id": "9e5da832-f78e-4b01-93af-d252d415d603",
+    "name": "甲如花甲粉",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 俾利喇街 愉景花園 地下E",
+    "desc": "營業時間：11:00～01:30",
+    "tags": [
+      "花甲粉",
+      "一人火鍋",
+      "迷你火鍋"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/9e5da832-f78e-4b01-93af-d252d415d603/logo-a83431fb-3a9e-4075-b1a3-a7ad6542beb1.webp"
+  },
+  {
+    "id": "fbd7a7aa-2556-4524-aa09-5197fb42b6be",
+    "name": "祖兒泰國菜",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 崗陵街(荒字巷)26A 鴻基大廈 B舖",
+    "desc": "正宗泰國菜老店，選用泰國進口材料. 蠔仔鐵板燒用新鮮蠔仔打入雞蛋及香料,攤到鐵板上煎製而成.地道泰國醃木瓜沙律,將木瓜絲和泰國香料等拌勻,以生菜包裹,入口酸爽. 愛吃甜的可以,泰式奶茶,芒果糯…",
+    "tags": [
+      "泰式",
+      "泰國菜",
+      "搭拋菜"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/fbd7a7aa-2556-4524-aa09-5197fb42b6be/logo-7f045a98-8236-40a7-a9aa-154ea3d9aacc.webp"
+  },
+  {
+    "id": "2c6269d6-e901-4b86-8d90-d47546951ce8",
+    "name": "文記養生堂",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 墨山街6-6A 信儀閣 6A地下",
+    "desc": "【文記養生堂】 營業：星期一至六 10:00–20:30（燉湯／老火湯約 11:30 起）；星期日休息。 燉湯可加購：澳洲海參 +、阿膠10克 +；周一至五可加三色藜麥飯 +。 涼茶重料少甜；…",
+    "tags": [
+      "燉湯",
+      "老火湯",
+      "涼茶"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/2c6269d6-e901-4b86-8d90-d47546951ce8/logo-05952c27-550b-4407-8d48-5a16a5681559.webp"
+  },
+  {
+    "id": "deb4742f-bf67-4e98-87c7-432d46fc3754",
+    "name": "為食妹",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門黑沙環馬路41號A新昌大廈地下",
+    "desc": "黑沙環台式滷肉飯與炸雞。每日 12:45 營業至凌晨 02:30。電話下單自取由店家確認九折，線上標價不自動打折。外送費示範為 MOP 6（閃蜂顯示約 $0–$6）。有規格的品項標價為起售價，…",
+    "tags": [
+      "滷肉飯",
+      "台式炸雞",
+      "黑沙環"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/deb4742f-bf67-4e98-87c7-432d46fc3754/logo-aead9857-6203-4fa3-bce4-4c79d16d6cef.webp"
+  },
+  {
+    "id": "6e7b77be-4fd1-43c4-8177-9b77bad31454",
+    "name": "糍家有道",
+    "category": "餐飲",
+    "area": "氹仔",
+    "address": "氹仔 埃武拉街218-366號花城利盈地下T座（花城新苗商場裏面6226隔壁）",
+    "desc": "糍家有道 · 手工糯米糍 每天現做，澳門品牌專賣（絕無分店） 氹仔埃武拉街花城新苗商場（6226 旁邊） 每日 11:45–22:15 獨家首創葡撻糯米糍，另有芒果、貓山王榴槤、鮮果與傳統豆沙…",
+    "tags": [
+      "糍家有道",
+      "糯米糍",
+      "葡撻糯米糍"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/6e7b77be-4fd1-43c4-8177-9b77bad31454/logo-fc9728fb-b34b-46e4-bf1a-d4a2dd8e8d40.webp"
+  },
+  {
+    "id": "11718788-1f4b-483a-9d10-c09055ae40a0",
+    "name": "宏達麵食（永樂店）",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 嘉野度將軍街(將軍街)6-8A 興發大廈 地下A室",
+    "desc": "營業時間早上09:00-凌晨03:00",
+    "tags": [
+      "麵食"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/11718788-1f4b-483a-9d10-c09055ae40a0/logo-f704d4af-12f0-44b7-a1ab-289dcb87bf71.webp"
+  },
+  {
+    "id": "6d1a296b-21cf-4fe0-88f6-98dd63b71abf",
+    "name": "漁鮮生",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門望廈社屋望德樓地下B鋪（黑沙環龍園停車場對面，近望廈社屋巴士站）",
+    "desc": "漁鮮生（FRESH MAN）在望廈社屋望德樓地下 B 鋪，黑沙環龍園停車場對面、近望廈社屋巴士站。每日 09:30–22:30，供應街市新鮮魚蝦蟹貝與即切刺身，可要求代為包處理。查詢 6598…",
+    "tags": [
+      "望廈海鮮",
+      "全澳免費送",
+      "夜貓刺身"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/6d1a296b-21cf-4fe0-88f6-98dd63b71abf/logo-476e8e85-e959-4a8d-ac24-a7c0ae493fa4.webp"
+  },
+  {
+    "id": "18ec3cb2-8c4a-4a9e-8c89-44f15ecea884",
+    "name": "溫暖沙拉咖啡店",
+    "category": "餐飲",
+    "area": "",
+    "address": "",
+    "desc": "溫暖沙拉主打暖沙律 營業時間10:30-20:30",
+    "tags": [
+      "Salad",
+      "EatGreen",
+      "輕食"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/18ec3cb2-8c4a-4a9e-8c89-44f15ecea884/logo-7260be42-9b18-4a3e-ad69-4bf422c58173.webp"
+  },
+  {
+    "id": "d564b932-0c91-45e9-86fd-0ec8e2711f13",
+    "name": "老饕牛肉麵 [示範]",
+    "category": "餐飲",
+    "area": "",
+    "address": "",
+    "desc": "台灣味·老饕情 營業時間: 周一至周六 11:00 - 21:00 (週日公休)",
+    "tags": [
+      "牛肉麵",
+      "台式牛肉麵"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/d564b932-0c91-45e9-86fd-0ec8e2711f13/logo-07e147f6-2d08-46f3-b5cd-ad6e42860ea2.webp"
+  },
+  {
+    "id": "6d8a4cde-2eec-4dfa-9ae8-55a55eb7f9e5",
+    "name": "拾和玖 猪脚饭 现煮鲜粥·手工大包.手工馅饼秘制",
+    "category": "餐飲",
+    "area": "氹仔",
+    "address": "氹仔 高勵雅馬路 海灣花園 地下AL座10號室",
+    "desc": "住家式手作中式點心與養生粥專門店，適合追求真材實料、健康飽足的本地家庭、學生及遊客，尤其推薦早餐/病後調理/深夜餓了來一頓暖胃滿分外賣!",
+    "tags": [
+      "粥鋪",
+      "讚手工馅餅",
+      "肉夾镆"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/6d8a4cde-2eec-4dfa-9ae8-55a55eb7f9e5/logo-7bf92c78-35dc-4c6d-8590-42ff845bb37e.webp"
+  },
+  {
+    "id": "c1596a81-f5f7-4198-9849-5f3532b28ecb",
+    "name": "黑沙環快宅",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 黑沙環馬路42號B 福祥樓",
+    "desc": "歡迎外賣 外賣電話：68148314 營業時間：12:00—20:00 逢星期日放假 主打#招牌海南雞飯 #泰式豬頸肉飯#肉醬意粉",
+    "tags": [
+      "海南雞飯",
+      "泰式豬頸肉飯",
+      "肉醬意粉"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/c1596a81-f5f7-4198-9849-5f3532b28ecb/logo-d066fc90-16cf-41ce-be7c-c38759487f48.webp"
+  },
+  {
+    "id": "161fb042-599f-4eaa-897f-e49ae222e969",
+    "name": "DADA TEA(大檸茶)",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 勞動節大馬路 廣福安花園(第二座) 地下BX",
+    "desc": "DADA TEA 大檸茶 是澳門原創的茶飲品牌，以手工調製的水果茶與特調茶飲為主打，強調讓顧客在忙碌生活中「Slow down, with my tea」（慢下來，享受一杯茶）。 每日｜11:…",
+    "tags": [
+      "檸茶",
+      "水果茶",
+      "特調茶飲"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/161fb042-599f-4eaa-897f-e49ae222e969/logo-ecf8b98c-c6ce-47f9-ad63-1bf913d2a8fb.webp"
+  },
+  {
+    "id": "d2a6effc-176a-4d5b-b3b1-d2544bbdb2ba",
+    "name": "阿虎打檸",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 龍嵩正街49-49B 聯輝樓 地下A座",
+    "desc": "澳門手打檸檬茶專門店，以香水檸檬現捶現泡，四款茶底（鴨屎香、紅茶、綠茶、烏龍）任選，檸茶清爽回甘、口鼻留香。 招牌手打檸檬茶、啖啖肉葡萄檸茶、虎打椰檸茶等人氣飲品，另有水果茶、椰系特調、奶蓋奶…",
+    "tags": [
+      "手打檸檬茶",
+      "澳門飲品",
+      "香水檸檬"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/d2a6effc-176a-4d5b-b3b1-d2544bbdb2ba/logo-55e46b7d-79d8-4561-ae48-df1c1def10cf.webp"
+  },
+  {
+    "id": "274af4fe-d465-4485-b74f-a0908ccbdc81",
+    "name": "霖記咖喱麵食(金碧坊店)",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 亞美打利庇盧大馬路 (新馬路) 金碧坊1樓101號舖",
+    "desc": "霖記咖喱麵食的創始人朱先生從小熱愛烹飪，並鍾愛咖喱滋味，經過多年來不斷嘗試與改良，成功研發出一款獨特配方，將香濃咖喱與麵食完美結合。品牌因朱先生對烹調的熱愛而誕生，同時體現他對澳門飲食文化的尊…",
+    "tags": [
+      "咖喱麵食",
+      "牛腩咖喱湯河",
+      "金碧坊"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/274af4fe-d465-4485-b74f-a0908ccbdc81/logo-38f6c950-c51e-4f26-9897-7043b3fdcd9c.webp"
+  },
+  {
+    "id": "02bb1907-e3b5-46a8-a906-a425655b3415",
+    "name": "Brewlab Coffee",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門桔仔街106號地下",
+    "desc": "Melbourne 風格精品咖啡。桔仔街106號地下，每日 08:00–19:00。果C美式、熱壓三文治、貝果與液體葡撻咖啡。咖啡源於實驗，源於生活。查詢 68189891。平台只記帳，不經手…",
+    "tags": [
+      "Brewlab",
+      "啡研咖啡",
+      "桔仔街"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/02bb1907-e3b5-46a8-a906-a425655b3415/logo-141590e0-50f6-4794-8ea8-3f5f3d1aae6c.webp"
+  },
+  {
+    "id": "37216128-c0a0-486d-922d-b3215d115f16",
+    "name": "南澳新明記",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 慕拉士前地18,22號 南澳花園(第一座) 地下I座,H座及閣仔",
+    "desc": "地址 澳門慕拉士前地18,22號南澳花園地下I座,H座及閣仔",
+    "tags": [
+      "特色粉面",
+      "雞湯米",
+      "冬陰公粉"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/37216128-c0a0-486d-922d-b3215d115f16/logo-b4b179de-6ade-4618-9ef7-ec201a181dc7.webp"
+  },
+  {
+    "id": "be47a1b1-efc3-446d-97da-e04d9c08cbdd",
+    "name": "小谷姐姐 麻辣拌 | 麻辣燙",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門菜園涌邊街370號濠江花園(第三座)地下R座",
+    "desc": "小谷姐姐麻辣拌、麻辣燙。每日 00:00–23:59。",
+    "tags": [
+      "麻辣拌",
+      "麻辣燙",
+      "骨湯"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/be47a1b1-efc3-446d-97da-e04d9c08cbdd/logo-110337ee-13ea-4d19-ad64-26ecf723fb77.webp"
+  },
+  {
+    "id": "7a5a0840-4987-4984-b5bc-d0eb251e77c1",
+    "name": "茶話濃",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 馬交石街23號 東華新邨(第二座) 地下B",
+    "desc": "我地系一間新中式奶茶，以真茶葉，明治鮮乳打造每杯奶茶出品，堅持高性價比的產品，另還有些現炸小食。",
+    "tags": [
+      "新中式奶茶",
+      "鮮乳奶茶"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/7a5a0840-4987-4984-b5bc-d0eb251e77c1/logo-020fae27-94ce-495c-a48d-646c804a2fda.webp"
+  },
+  {
+    "id": "dfa8fa8b-23cb-42ab-b338-92998d422893",
+    "name": "大頭妹糖水鋪",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 草堆街34號 地下",
+    "desc": "【溫馨提示】 歡迎光臨！營業時間中午 12:00－售完即止（參考 12:00–18:00）。 小店走低糖路線，喜歡甜一點請加糖💕 五色丸為純手工，口感偏 Q 彈，不可放入雪櫃。 團餐／糖水甜…",
+    "tags": [
+      "承接公司/學校/商會/銀行/政府等團餐"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/dfa8fa8b-23cb-42ab-b338-92998d422893/logo-3fce1502-7d0c-44f9-a27b-a5acab6cad00.webp"
+  },
+  {
+    "id": "9cf098b9-2bc7-49c8-b3ac-c7644f259048",
+    "name": "靚媽食堂",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 和樂坊二街99號 宏信大廈 地下O",
+    "desc": "🥰靚媽食堂Juicy MaMa🦟型小店,Juicy媽用❤️專研蒸飯 燉湯 住家湯🥣 小甜品,秉承家嘅味道 日式布丁燒🍮各式奶凍 毛巾卷 雪梅娘",
+    "tags": [
+      "蒸飯",
+      "燉湯",
+      "住家湯"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/9cf098b9-2bc7-49c8-b3ac-c7644f259048/logo-9852f675-3962-48df-8162-15f0a6bd7cab.webp"
+  },
+  {
+    "id": "1a4d0b73-9979-436e-a349-0b1a3e749dc3",
+    "name": "博仁科技 Borntech",
+    "category": "零售",
+    "area": "澳門",
+    "address": "澳門皇朝宋玉生廣場中土大廈12F",
+    "desc": "【🧑‍💻澳門手提電腦專門店 💻】 電腦銷售🧑‍💼，保養🧹，維修🧰一站式服務 二手電腦，demo機，倉存機 以優惠價格就可以享受接近新機既質素 線上預約，線下面交 試完才做決定，絕…",
+    "tags": [
+      "電腦",
+      "手提電腦",
+      "辦工電腦"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/1a4d0b73-9979-436e-a349-0b1a3e749dc3/logo-bb068a55-ca8a-43a6-99d6-285b27977f18.webp"
+  },
+  {
+    "id": "137d779d-4396-4960-b465-09cd48583608",
+    "name": "853 Mac’S",
+    "category": "餐飲",
+    "area": "",
+    "address": "文創手工曲奇餅🍪 100%澳門🇲🇴純手工製造 ｜散水餅｜回禮餅｜新居入伙｜公司訂製｜ Top 5產品： 📍夏威夷果仁朱古力脆脆 📍馬拉盞果仁曲奇 📍馬拉盞果仁薄脆 📍開心果抹茶脆 📍可可燕麥脆 外賣牌照編號：0416/2025",
+    "desc": "提督馬路華隆工業大廈5樓",
+    "tags": [
+      "手工曲奇",
+      "散水餅",
+      "回禮餅"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/137d779d-4396-4960-b465-09cd48583608/logo-30a94802-07dc-441b-bf41-080aa2ffd2a1.webp"
+  },
+  {
+    "id": "3f084e4e-42df-40bb-a8af-5fd09593819d",
+    "name": "感恩美容中心",
+    "category": "美容",
+    "area": "澳門",
+    "address": "澳門 肥利喇亞美打大馬路(荷蘭園大馬路)(荷蘭園正街)59 - 61 號 悅雅軒地下感恩美容中心, Macau, Macau",
+    "desc": "感恩國際創立於2014年，主營美容養生，半永久項目，國內整形類項目，一直以愛服務愛美人士爲宗旨，讓愛蔓延，堅持多年捐款營業額百分之一俾愛心醫療隊幫助有需要嘅人，傳揚主嘅恩典，讓更多人得到溫暖。",
+    "tags": [
+      "美容養生",
+      "半永久"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/3f084e4e-42df-40bb-a8af-5fd09593819d/logo-ee3a7652-9c98-47d7-86b0-128d4a680f6e.webp"
+  },
+  {
+    "id": "57a13e27-36a2-47d9-b1e1-2aa9f576a5f6",
+    "name": "孫尚香｜招牌雞粥·海南雞飯（金碧坊店）",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 亞美打利庇盧大馬路 (新馬路) 金碧文娱中心地面層金碧坊G08",
+    "desc": "【起源｜靈感源自三國，味承江湖溫柔】東漢末年，孫尚香文武雙全、明艷果敢。相傳她隨軍行旅，常以鮮雞熬粥、製雞飯，療愈軍士、溫暖人心。千年後，創辦人以「孫尚香」為名，將這份古早味帶到澳門——不做浮…",
+    "tags": [
+      "招牌雞粥",
+      "海南雞飯",
+      "金碧坊"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/57a13e27-36a2-47d9-b1e1-2aa9f576a5f6/logo-83b99381-f44e-40b3-8df4-6434ac30f59f.webp"
+  },
+  {
+    "id": "9a76ca37-ff8a-404f-99b6-74b0a489f7ee",
+    "name": "二師兄花果山",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 新勝街60號 英信大廈 A鋪",
+    "desc": "訂製派對到會",
+    "tags": [
+      "派對到會",
+      "無味精",
+      "精緻派對"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/9a76ca37-ff8a-404f-99b6-74b0a489f7ee/logo-13009d0c-1f49-40e2-ba0b-390bf0eb5a9b.webp"
+  },
+  {
+    "id": "942a7ab3-dc76-4d42-815a-6ca7f35f75a4",
+    "name": "萃軒茶記",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門渡船街5A號富源大廈地下A鋪",
+    "desc": "年輕人的茶記。渡船街5A號富源大廈地下A鋪，每日 07:30–20:30。招牌摩囉雞髀、芝士焗飯、黃金咖喱。店舖電話 28828957。平台只記帳，不經手付款。",
+    "tags": [
+      "萃軒茶記",
+      "渡船街",
+      "焗飯"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/942a7ab3-dc76-4d42-815a-6ca7f35f75a4/logo-0c10408a-6dfa-4ddb-a605-570b41f072bd.webp"
+  },
+  {
+    "id": "dd335c58-09eb-458f-8694-fb82acb301ff",
+    "name": "阿豬 Sarapatel",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 船澳巷9號 地下（雅新大廈巷內直入，沙梨頭大興街百佳超市對面巷弄）",
+    "desc": "餐廳資訊店名： 阿豬 Sarapatel 外賣店菜式： 傳統葡式家常菜 營業時間： 20:30 - 23:00（星期六、日及公眾假期休息） 特色菜品： 招牌 Sarapatel（採用豬雜等食材…",
+    "tags": [
+      "紅粉燴豬肉",
+      "葡式雜燴",
+      "葡萄牙菜"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/dd335c58-09eb-458f-8694-fb82acb301ff/logo-983bd4e2-f09f-4464-99c1-34ba2fcff06c.webp"
+  },
+  {
+    "id": "4904f49f-14c7-4ea8-b4eb-35870c1c6965",
+    "name": "M.O明澳·鮮熬雞湯米線專門店（金碧坊）",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 亞美打利庇盧大馬路 (新馬路) 金碧文娱中心地面層及一樓 G08",
+    "desc": "明澳，寓意「明制鮮味，澳門匠心」。生於澳門、深耕本土，堅持每日新鮮現熬、拒絕預製料理，把澳門街頭的家常好味，做成人人吃得起的暖心簡餐。從一碗鮮雞湯米線開始，讓每一口都是澳門本地的煙火氣。 每日…",
+    "tags": [
+      "雞湯米線",
+      "金碧坊",
+      "澳門地道"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/4904f49f-14c7-4ea8-b4eb-35870c1c6965/logo-9eb32029-b33a-408c-913f-85059b1f4116.webp"
+  },
+  {
+    "id": "76ecbb69-d55a-4685-88fe-cd2f6d2cd7a9",
+    "name": "DADA TEA(大檸茶)・花城",
+    "category": "餐飲",
+    "area": "氹仔",
+    "address": "氹仔 南京街85號 南京街 花城地下 AF座",
+    "desc": "DADA TEA 大檸茶 是澳門原創的茶飲品牌，以手工調製的水果茶與特調茶飲為主打，強調讓顧客在忙碌生活中「Slow down, with my tea」（慢下來，享受一杯茶）。 每日｜11:…",
+    "tags": [
+      "水果茶",
+      "大檸茶"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/76ecbb69-d55a-4685-88fe-cd2f6d2cd7a9/logo-0a0d962c-cac2-4abf-9f79-226502be5034.webp"
+  },
+  {
+    "id": "8759ab48-d4cf-46cb-ae81-670bdbbd5f10",
+    "name": "宵淑先食",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 菜園涌街A座072號 台山平民大廈 (88茶餐廳對面)",
+    "desc": "位於澳門半島菜園涌邊街的 宵淑先食，是一間主打精緻燒烤與串燒的宵夜小店。店家秉持著對食材與火候的堅持，為夜貓族與美食愛好者提供熱騰騰的現烤串燒、鮮美海鮮以及多款冷飲搭配，是深夜放鬆、朋友聚餐的…",
+    "tags": [
+      "飲食",
+      "燒烤"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/8759ab48-d4cf-46cb-ae81-670bdbbd5f10/logo-d30bc423-2d8a-438f-a513-112391a3d4a6.webp"
+  },
+  {
+    "id": "5913e539-f45e-4922-be3f-1e1a61904344",
+    "name": "低卡美感 喜悅福海",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門亞利鴉架街13A號地下",
+    "desc": "營業時間: 一,二,三,四,五,六,日:09:00-21:00",
+    "tags": [
+      "健身餐",
+      "減脂",
+      "營養餐"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/5913e539-f45e-4922-be3f-1e1a61904344/logo-5fb10748-8a94-42c5-b43a-738ebfe90bca.webp"
+  },
+  {
+    "id": "da1b67d2-58c6-4d28-ad82-69402b8180c0",
+    "name": "賞食",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門高士德高地烏街51號地下",
+    "desc": "特色餐點：喇沙湯麵 越式捞檬 秘制咖哩 鐵板扒餐 日式丼飯 精美小食。 營業時間：下午 11:00 至 凌晨 02:00（依節慶或活動可能有所調整）。",
+    "tags": [
+      "喇沙湯麵",
+      "越式捞檬",
+      "秘制咖哩"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/da1b67d2-58c6-4d28-ad82-69402b8180c0/logo-d3fbd205-04e0-4281-8747-162c838e3681.webp"
+  },
+  {
+    "id": "338bae57-049a-442a-ba4f-98d481813a72",
+    "name": "清露小舍",
+    "category": "餐飲",
+    "area": "氹仔",
+    "address": "氹仔 信虹花園大廈 717-723號 地下A座",
+    "desc": "營業時間：週二至週日 11:00 - 19:00（每週一休息）",
+    "tags": [
+      "茶飲手搖專門店",
+      "暴打檸檬茶",
+      "楊枝甘露"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/338bae57-049a-442a-ba4f-98d481813a72/logo-d7ef4d02-9858-40e2-ad3d-fa299eba3f3c.webp"
+  },
+  {
+    "id": "000f1c3e-6034-48fb-86d5-68efab89dcac",
+    "name": "聚缘過橋米線館",
+    "category": "餐飲",
+    "area": "",
+    "address": "",
+    "desc": "「聚緣過橋米線館」是澳門非常受歡迎的雲南米線專賣店，以濃郁醇厚的湯底與彈牙米線聞名，招牌菜品包含秘制襟撈炸醬米線與爆汁蟹籽蝦滑。 營業時間: 早上11點至晚上九點",
+    "tags": [
+      "米線",
+      "過橋米線",
+      "炸醬米線"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/000f1c3e-6034-48fb-86d5-68efab89dcac/logo-8683023d-1348-4a8e-9cba-4e5cadf67435.webp"
+  },
+  {
+    "id": "1ee1d20d-e50c-4377-87ef-d38a85078d8a",
+    "name": "米皇咖啡美食",
+    "category": "餐飲",
+    "area": "",
+    "address": "河邊新巷1號B",
+    "desc": "• 地址：澳門下環河邊新巷1號地舖（榮洲大廈地下 1B-1C 號） • 電話：+853 2897 3993 / +853 2893 3320 • 營業時間：約 7:00 – 21:00 • 類…",
+    "tags": [
+      "粉麵",
+      "米線",
+      "茶餐廳"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/1ee1d20d-e50c-4377-87ef-d38a85078d8a/logo-eb38f419-8abc-44aa-84b9-09d792792df8.webp"
+  },
+  {
+    "id": "b60fbe18-54d6-48dd-983a-1c540b11246d",
+    "name": "多多美食",
+    "category": "餐飲",
+    "area": "",
+    "address": "📍 多多美食| 澳門氹仔孫逸仙博士大馬路大中華廣場 ⏰ 10:00-凌晨1:00 | 📞 +853-28228282 🇲🇴微信號：+853 66391777",
+    "desc": "大中華廣場",
+    "tags": [
+      "傳統炭燒",
+      "燒臘",
+      "脆皮燒肉"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/b60fbe18-54d6-48dd-983a-1c540b11246d/logo-f031a246-7871-47c7-8369-a937267a1fcb.webp"
+  },
+  {
+    "id": "063b1504-1014-4051-9f1f-a44c68f02266",
+    "name": "美富美食",
+    "category": "餐飲",
+    "area": "",
+    "address": "提督馬路97號",
+    "desc": "提供各式快餐，歡迎學校，補習班，項目會展，工地大量訂餐，價格優惠 營業時間 星期一至六 08:00 - 14:30 16:30 - 20:30",
+    "tags": [
+      "快餐店",
+      "到會",
+      "訂餐"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/063b1504-1014-4051-9f1f-a44c68f02266/logo-80a361d2-6bd9-4ccc-b821-9d1cffabdc37.webp"
+  },
+  {
+    "id": "3d811828-0182-4b17-868e-58d26bdb31d3",
+    "name": "E鉌堂",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門林茂海邊街79號金灣豪庭地下N",
+    "desc": "廣東傳統坐月必食 \"薑醋\"。在過去十年的經驗和努力下，研發年輕一代都說讚的秘制薑醋。除了選用含有豐富骨膠原的上等豬手，貼近新一代的口味，更用上爽口彈牙的雞腳吃起來一點都不油膩。是伴飯的好拍檔。…",
+    "tags": [
+      "月子餐",
+      "薑醋",
+      "豬手"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/3d811828-0182-4b17-868e-58d26bdb31d3/logo-6862ff3d-4457-4855-af89-d2274391a752.webp"
+  },
+  {
+    "id": "76e5fbf2-bfea-4601-baef-2ceda91fd7af",
+    "name": "川記燒烤小食",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 馬交石街38-46 南華新邨(第五座) 地下E舖",
+    "desc": "澳門黑沙環地區非常受歡迎的人氣宵夜，專賣各式惹味炭火串燒及麻辣川味小食 地址：澳門馬交石街56號，南華新村第5座地下E舖 營業時間：18:00 - 04:00 特色餐點包含烤肉類、海鮮、蔬菜以…",
+    "tags": [
+      "宵夜",
+      "串燒",
+      "烤肉"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/76e5fbf2-bfea-4601-baef-2ceda91fd7af/logo-3e95e7cd-1362-4f9d-844f-a2a7996ee140.webp"
+  },
+  {
+    "id": "22b75cb3-2f3f-4040-9d25-8fe9692d29bb",
+    "name": "生活原素",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門半島公局新市北街10號（即營地街市門口）",
+    "desc": "提供中西結合素食食品（漢堡包、披蕯、焗飯意粉等等） 營業時間：10:00—20:00",
+    "tags": [
+      "素食",
+      "漢堡包",
+      "披蕯"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/22b75cb3-2f3f-4040-9d25-8fe9692d29bb/logo-57283e5a-91d0-4657-9f66-397b19c3261a.webp"
+  },
+  {
+    "id": "cf166441-2c28-4c44-9d4f-4ba572c99596",
+    "name": "時時小食",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 風順堂街36 順良大廈 地下A座B鋪",
+    "desc": "",
+    "tags": [],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/cf166441-2c28-4c44-9d4f-4ba572c99596/logo-2440f79f-a6cf-478f-ba5b-a68095529e03.webp"
+  },
+  {
+    "id": "ddb61e3c-3323-4452-9d53-753d541167bd",
+    "name": "國際藥房",
+    "category": "零售",
+    "area": "澳門",
+    "address": "澳門 下環街6號 寶榮大廈 地下",
+    "desc": "營業時間 一,二,三,四,五,六,日: 09:00-21:00",
+    "tags": [
+      "家庭常備藥",
+      "保健品",
+      "日用美妝母嬰用品"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/ddb61e3c-3323-4452-9d53-753d541167bd/logo-274afa9d-298b-4996-8c81-4d2541a22522.webp"
+  },
+  {
+    "id": "369a4724-008a-438a-94da-a202741a36c5",
+    "name": "Order Bread 泰式煎餅",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 花王堂斜巷2-F號成安大廈地下A座",
+    "desc": "Order Bread 泰式煎餅小店 澳門花王堂斜巷2-F號成安大廈地下A座（白鴿巢） 每日 10:00–22:30 招牌：葡撻煎餅、蒜香芝味蝦蝦煎餅、即叫即做水果撈、鮮榨果汁 Wish yo…",
+    "tags": [
+      "OrderBread",
+      "泰式煎餅",
+      "白鴿巢"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/369a4724-008a-438a-94da-a202741a36c5/logo-bbd71d42-d676-4abe-b963-ed32dc0e8131.webp"
+  },
+  {
+    "id": "2a50f243-ee33-4089-a846-4a5d05bb4ff9",
+    "name": "鸿记食品",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 黑沙環馬路11號 南方花園(第四座) C鋪",
+    "desc": "【溫馨提示】 1. 有錯漏請來電，會馬上跟進！ 2. 雨天配送約 2 小時；13:00–15:00 出餐高峰可提前下單；微信 66136407（同號） 3. 無走糖、無少甜、無走冰、無溫、無冰…",
+    "tags": [
+      "澳門糖水",
+      "糖水",
+      "仙草"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/2a50f243-ee33-4089-a846-4a5d05bb4ff9/logo-9e4b31f2-68a6-4981-b990-d96971b6962c.webp"
+  },
+  {
+    "id": "33bc8626-aa2b-4189-b73a-3593076ade5c",
+    "name": "十下十下",
+    "category": "餐飲",
+    "area": "下環",
+    "address": "下環街73號永寧大廈",
+    "desc": "營業時間17.00-2.00",
+    "tags": [
+      "川味特色小食",
+      "川式麻辣燙",
+      "火鍋"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/33bc8626-aa2b-4189-b73a-3593076ade5c/logo-5d1502b4-0959-4b8b-b931-ecae19ccc507.webp"
+  },
+  {
+    "id": "463cc041-2705-4df1-94a5-0f8305b5303f",
+    "name": "新一代彩色沖印攝影文具精品",
+    "category": "零售",
+    "area": "澳門",
+    "address": "澳門下環街28號全合大廈號 B",
+    "desc": "⏰營業時間: 08:30–20:00 📞電話: 28969020 🔻折扣優惠: 所有貨品享有九五折優惠(特價品除外) ▪️這個間店舖應有盡有，文具和精品，買文具和小禮物都很方便🎁✏️📘",
+    "tags": [
+      "影證件相",
+      "影印",
+      "文具"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/463cc041-2705-4df1-94a5-0f8305b5303f/logo-d20faf9b-29a4-4433-a17c-3a46629b24f0.webp"
+  },
+  {
+    "id": "bdfe229d-7cf9-4d5b-9d9e-deff75b12c3d",
+    "name": "阿婆正（成仔記）食店",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 下環街92號利達樓地下D號舖",
+    "desc": "豉汁蒸魚飯、馳名粥品、炒粉麵、時日靚湯與家常餸菜。 每日 11:30–14:30、17:30–22:30。 查詢 28998889。",
+    "tags": [
+      "下環粥品",
+      "蒸魚飯",
+      "葡汁牛尾"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/bdfe229d-7cf9-4d5b-9d9e-deff75b12c3d/logo-53ab9c83-33a4-4d41-a33b-e110e1a51bdf.webp"
+  },
+  {
+    "id": "d102e2f1-5032-42fd-921a-681d3d29fc08",
+    "name": "樂咖啡LOK COFFEE",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門筷子基宏信大廈 126號地下C座",
+    "desc": "「樂咖啡」藏在筷子基的街角，我們不是那種講究儀式感的精品咖啡館，更像是一間鄰居的飯堂——想吃飽、想喝好，隨時推門進來就對了。 店名叫「樂」，是希望大家吃得快樂。我們把街坊喜歡的口味都放進餐牌：…",
+    "tags": [
+      "披薩",
+      "滑蛋飯",
+      "瑞士雞翼"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/d102e2f1-5032-42fd-921a-681d3d29fc08/logo-9890091e-1f30-4912-8de9-59002fbc9117.webp"
+  },
+  {
+    "id": "43cb621d-0711-4090-86ef-ce0bbd70dc9c",
+    "name": "NINJA Gelato",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 風順堂街36-38 順良大廈 地下(占西餅店對面)",
+    "desc": "Est.2024 🇲🇴自家制意式雪糕 營業時間：11:30am-6:30pm",
+    "tags": [
+      "雪糕零售",
+      "雪糕批發供應",
+      "攤位活動"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/43cb621d-0711-4090-86ef-ce0bbd70dc9c/logo-60dcdd14-eb32-496d-adb5-5b0764fd486e.webp"
+  },
+  {
+    "id": "2612d789-18a9-4b84-bbf6-bee232e248ce",
+    "name": "Map Cafe",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 連勝馬路28A-28D 泉勝軒 地下A鋪",
+    "desc": "食完呢個，你先知道乜嘢叫真正嘅「醬釀豬仔骨」！ 地址：連勝馬路泉勝軒地下A鋪 電話: +853-68698942 營業時間：週一至日12:00-22:00:00 週二全天休息",
+    "tags": [
+      "飲食"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/2612d789-18a9-4b84-bbf6-bee232e248ce/logo-8d82193f-48cb-4fba-8018-ff1187b5d5a4.webp"
+  },
+  {
+    "id": "fb207d64-788d-4dd5-9628-43b0f34ad169",
+    "name": "一見葡撻",
+    "category": "餐飲",
+    "area": "",
+    "address": "冼星海大馬路245號恆基花園地下T舖",
+    "desc": "",
+    "tags": [
+      "葡撻"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/fb207d64-788d-4dd5-9628-43b0f34ad169/logo-1d7e08ac-9668-4f2d-a66a-e07a5d0ab7ed.webp"
+  },
+  {
+    "id": "0e939919-34d4-46fd-9e95-e953153047c1",
+    "name": "人人百貨",
+    "category": "零售",
+    "area": "",
+    "address": "大炮台斜巷27- B號，豪富樓地下B座",
+    "desc": "健康食品及飲品，文創產品，文創DIY",
+    "tags": [
+      "健康食品",
+      "文創"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/0e939919-34d4-46fd-9e95-e953153047c1/logo-e5b4943c-eb92-48cc-b552-3d2b853b8576.webp"
+  },
+  {
+    "id": "a43dcd83-111c-4ee5-9275-430c66ded6c1",
+    "name": "水上人家",
+    "category": "餐飲",
+    "area": "沙梨頭",
+    "address": "沙梨頭街市美食廣場2樓N10",
+    "desc": "海鮮",
+    "tags": [
+      "海鮮加工",
+      "靚貨親民價格",
+      "澳門大閘蟹"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/a43dcd83-111c-4ee5-9275-430c66ded6c1/logo-0f7df239-a130-4784-8431-6161abf71ddc.webp"
+  },
+  {
+    "id": "763353cc-ac80-4b48-907a-980aa4bb6e6e",
+    "name": "天福台式鐵板燒",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 栢林街 星海豪庭(第一座金星閣) 地下K L M座",
+    "desc": "營業時間：11:20 - 21:30 訂枱熱線：853-28454204",
+    "tags": [
+      "台式鐵板燒"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/763353cc-ac80-4b48-907a-980aa4bb6e6e/logo-0bcf31b7-ca0b-49e3-ba31-8d9dc0bae4a6.webp"
+  },
+  {
+    "id": "dab572a4-3ae6-4c01-9ecc-f083a7f7df77",
+    "name": "日駿車行",
+    "category": "零售",
+    "area": "澳門",
+    "address": "澳門水字巷14F號鴻基大廈地下",
+    "desc": "專業維修電單車 驗車 精工安裝 二手車 營業時間: 11:00-20:00",
+    "tags": [
+      "車行",
+      "電單車",
+      "二手車"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/dab572a4-3ae6-4c01-9ecc-f083a7f7df77/logo-aedc3dc4-a0f9-4822-927c-deb22ce2e41a.webp"
+  },
+  {
+    "id": "f0772c58-7dc1-437e-a408-40b96b8fc758",
+    "name": "醉強吃貨",
+    "category": "餐飲",
+    "area": "黑沙環",
+    "address": "黑沙環第二街7-9號萬利樓地下A座",
+    "desc": "海鮮外賣 醉辣海鮮 生醃海鮮",
+    "tags": [
+      "海鮮外賣",
+      "醉辣海鮮",
+      "生醃海鮮"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/f0772c58-7dc1-437e-a408-40b96b8fc758/logo-a55e3ebe-9b56-4a3e-8203-2d48f5fcffb0.webp"
+  },
+  {
+    "id": "c1ce7c18-4a14-46f2-b823-1c35373584e7",
+    "name": "達記甜品",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門紅街市小販區23號檔",
+    "desc": "天氣酷熱時，有否懷念童年時路邊的冰凍糖水？紅豆沙大口大口的灌，菠蘿冰大口大口的啜，涼快。位於澳門紅街市對面的達記糖水，也是一架路邊小檔式的糖水車，所售賣的糖水種類繁多，其中冬瓜水清甜消暑，夏日…",
+    "tags": [
+      "糖水",
+      "紅豆沙",
+      "冬瓜水"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/c1ce7c18-4a14-46f2-b823-1c35373584e7/logo-c7c45b02-f8da-4a47-94a8-cb1e85a01427.webp"
+  },
+  {
+    "id": "e86b2fee-c372-4b05-9d73-93b07969e297",
+    "name": "有間糖水（正宗糖水首創蛋堡）",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門鹽里15-HA號賢明苑地下L座",
+    "desc": "中式 蛋餅外脆內軟、蛋味濃鬰 O；雞蛋仔熱辣 脆口、芝麻糊香濃滑順不甜腻 ；雙皮奶 與綠豆沙雖有改良（如布丁口感、豆肉做 法） 營業時間 週一至週日 1100-23:59 00:00-00:3…",
+    "tags": [
+      "蛋堡",
+      "雞蛋仔",
+      "芝麻糊"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/e86b2fee-c372-4b05-9d73-93b07969e297/logo-ff3eb86e-0f35-4990-afcb-69d2c50b3996.webp"
+  },
+  {
+    "id": "dd262a82-5b97-45db-9e32-988fc1f739a6",
+    "name": "Tasting cafe 嚐•味",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 西墳馬路1號 保豐大廈 地下B舖",
+    "desc": "日式鬆餅,QQ窩夫，伯爵窩夫，天然水果茶，全手 工薄餅，特色飲品甜品",
+    "tags": [
+      "日式鬆餅",
+      "窩夫",
+      "水果茶"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/dd262a82-5b97-45db-9e32-988fc1f739a6/logo-4d6335da-dcf1-4ad1-b337-659cb652bcee.webp"
+  },
+  {
+    "id": "88119ad1-9195-4734-919e-025e35edc816",
+    "name": "金越越南牛肉粉",
+    "category": "餐飲",
+    "area": "",
+    "address": "東望洋新街206號定威地下B大廈",
+    "desc": "堅持使用越南進口食材，甜醬、魚露甚至豉油，無一例外。故無需遠赴越南，在金越即可品嘗越南風味。 營業時間 9:30 AM–1 AM",
+    "tags": [
+      "牛肉刺身",
+      "順化牛肉粉",
+      "特別火車頭湯檬"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/88119ad1-9195-4734-919e-025e35edc816/logo-3e431bd1-0af5-4b2e-abfe-3a26575cfbae.webp"
+  },
+  {
+    "id": "400eed96-73ed-4696-88d9-a119b447f728",
+    "name": "喜悅無限美肌專業中心",
+    "category": "美容",
+    "area": "澳門",
+    "address": "澳門 連勝馬路102-102A 興華大廈 (B座)地下",
+    "desc": "悅無限美肌專業中心的工作涉及美容護理、SPA手技、頭皮與肌膚專業調理、客戶管理與專業培訓等多元任務，並強調療癒與放鬆的職場氛圍，適合追求專業技能成長及享受互動成就感的人。 營業時間：星期一至星…",
+    "tags": [
+      "美容",
+      "SPA"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/400eed96-73ed-4696-88d9-a119b447f728/logo-2c718eec-53ac-4de9-86d2-c1cfd90caea5.webp"
+  },
+  {
+    "id": "5c5af0b3-e7e6-47c6-85c8-b07f2dcfbf24",
+    "name": "中國地方菜",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 爹美刁施拿地大馬路(施拿地馬路)172-230 沙梨頭街巿巿政綜合大樓 2樓 N2",
+    "desc": "私房菜",
+    "tags": [
+      "私房菜"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/5c5af0b3-e7e6-47c6-85c8-b07f2dcfbf24/logo-65d43684-cc2b-42f2-b4fd-86d9d4e06e6d.webp"
+  },
+  {
+    "id": "69398f03-1f4e-4b87-9f7b-459dd6486472",
+    "name": "heyKopi",
+    "category": "餐飲",
+    "area": "澳門",
+    "address": "澳門 菜園涌邊街322-358 濠江花園 (第二座) 地下F",
+    "desc": "Hey Kopi 是一間位於澳門的特色咖啡店，提供地道飲品與餐點。店舖鄰近菜園涌邊街一帶，是當地居民喜愛的休閒餐飲選擇。 謍業時間: 11:00 - 20:00",
+    "tags": [
+      "外賣",
+      "馬來西亞",
+      "咖啡"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/69398f03-1f4e-4b87-9f7b-459dd6486472/logo-a972b159-8290-41e0-9bef-74242cfba97c.webp"
+  },
+  {
+    "id": "ef2de8f4-6e69-4348-88ca-e15d08725957",
+    "name": "生活原素",
+    "category": "零售",
+    "area": "澳門",
+    "address": "澳門公局新市北街10號地下",
+    "desc": "服務介紹: 經營歐美素食健康有機產品 營業時間: 一,二,三,四,五,六,日:10:00-20:00",
+    "tags": [
+      "有機",
+      "素食食品",
+      "健康產品"
+    ],
+    "logo": "https://zymdemjflsckicwcinxl.supabase.co/storage/v1/object/public/merchant-assets/ef2de8f4-6e69-4348-88ca-e15d08725957/logo-8d64a10c-c2d6-4891-a79e-0cc8e00561c7.webp"
+  }
+];
+
+export const LEDGER_MERCHANTS: LedgerMerchant[] = ALL_MERCHANTS;
+
+export const MERCHANT_TOTAL = LEDGER_MERCHANTS.length;
+
+export const MERCHANT_CATEGORIES = ["餐飲", "零售", "美容"] as const;
