@@ -15,6 +15,18 @@ export type ReceiptDraft = {
   payment_method?: string;
   payment_status?: string;
   input_method?: string;
+  /**
+   * 整張單嘅品類（2026-09-25 由 macau-pos 引入，兩邊一致）。
+   * 存喺 `raw_ocr_data.category`，新增收據時必填。
+   * 舊收據（macau-pos 上線前）可能冇值 ⇒ `undefined`。
+   */
+  category?: string;
+  /**
+   * 幣值（2026-10-11 由 macau-pos 引入，兩邊一致）。
+   * 同時寫頂層 `receipts.currency` 同 `raw_ocr_data.currency`。
+   * 未提供 ⇒ 落 `'MOP'`（同 macau-pos `normalizeReceiptCurrency`）。
+   */
+  currency?: string;
   date: string;
   total_amount: number;
   items: ReceiptDraftItem[];
@@ -215,6 +227,17 @@ export function normalizeReceiptDraft(input: unknown): ReceiptDraft {
     input_method: String(
       getFirstDefined(payload, ["input_method"]) ?? ""
     ).trim() || undefined,
+    category: String(
+      getFirstDefined(payload, ["category", "item_category"]) ?? ""
+    ).trim() || undefined,
+    currency: (() => {
+      const top = String(getFirstDefined(payload, ["currency"]) ?? "").trim().toUpperCase();
+      if (top) return top;
+      const nested = isRecord(payload.raw_ocr_data)
+        ? String((payload.raw_ocr_data as UnknownRecord).currency ?? "").trim().toUpperCase()
+        : "";
+      return nested || "MOP";
+    })(),
     date: normalizeDate(getFirstDefined(payload, ["date", "receipt_date", "transaction_date"])),
     total_amount: totalAmount > 0 ? totalAmount : calculatedTotal,
     items,

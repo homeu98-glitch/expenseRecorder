@@ -42,6 +42,12 @@ export default function EditReceiptPage() {
   const [activeUnitDropdownId, setActiveUnitDropdownId] = useState<number | null>(null);
   const [supplierItemMap, setSupplierItemMap] = useState<Record<string, string[]>>({});
   const [productPresetMap, setProductPresetMap] = useState<Record<string, { product_type?: string; default_unit?: string }>>({});
+  /** 品類選單選項：商家歷史收據出現過嘅品類（`raw_ocr_data.category`）distinct。 */
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  /** 幣值選單選項：預設 MOP／HKD／RMB，再加埋歷史出現過嘅幣值。 */
+  const [currencyOptions, setCurrencyOptions] = useState<string[]>(["MOP", "HKD", "RMB"]);
+  /** 品類「其他…」手動輸入模式（同 macau-pos）。 */
+  const [manualCategory, setManualCategory] = useState(false);
   const [customUnits, setCustomUnits] = useState<string[]>(["kg", "lb"]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -140,6 +146,7 @@ export default function EditReceiptPage() {
             id,
             receipt_date,
             total_amount,
+            currency,
             image_url,
             raw_ocr_data,
             merchants(name),
@@ -164,6 +171,8 @@ export default function EditReceiptPage() {
           payment_method: receipt.raw_ocr_data?.payment_method,
           payment_status: receipt.raw_ocr_data?.payment_status,
           input_method: receipt.raw_ocr_data?.input_method,
+          category: receipt.raw_ocr_data?.category,
+          currency: receipt.currency,
           date: receipt.receipt_date,
           total_amount: receipt.total_amount,
           image_data_url: receipt.raw_ocr_data?.image_data_url,
@@ -195,6 +204,8 @@ export default function EditReceiptPage() {
           supabase
             .from("receipts")
             .select(`
+              currency,
+              raw_ocr_data,
               merchants(name),
               receipt_items(name)
             `)
@@ -212,6 +223,8 @@ export default function EditReceiptPage() {
         const allItems = new Set<string>();
         const itemMap = new Map<string, Set<string>>();
         const presetMap = new Map<string, { product_type?: string; default_unit?: string }>();
+        const categorySet = new Set<string>();
+        const currencySet = new Set<string>();
         setCustomUnits(presets.customUnits);
 
         presets.suppliers.forEach((supplier) => {
@@ -253,7 +266,21 @@ export default function EditReceiptPage() {
           if (merchantKey && itemSet) {
             itemMap.set(merchantKey, itemSet);
           }
+
+          // 收集品類（整張單一個，存 raw_ocr_data.category）。
+          const raw = receipt.raw_ocr_data as { category?: unknown } | null | undefined;
+          if (raw && typeof raw.category === "string" && raw.category.trim()) {
+            categorySet.add(raw.category.trim());
+          }
+          // 收集幣值（頂層欄，fallback 唔加 MOP 避免全庫都係 MOP）。
+          const cur = typeof receipt.currency === "string" && receipt.currency.trim() ? receipt.currency.trim().toUpperCase() : "";
+          if (cur && cur !== "MOP") {
+            currencySet.add(cur);
+          }
         });
+
+        const sortedCategories = Array.from(categorySet).sort();
+        const sortedCurrencies = Array.from(new Set(["MOP", "HKD", "RMB", ...currencySet])).sort();
 
         setSupplierSuggestions(Array.from(new Set(merchantNames)).sort());
         setAllItemSuggestions(Array.from(allItems).sort());
@@ -263,6 +290,8 @@ export default function EditReceiptPage() {
             Array.from(itemMap.entries()).map(([merchant, items]) => [merchant, Array.from(items).sort()])
           )
         );
+        setCategoryOptions(sortedCategories);
+        setCurrencyOptions(sortedCurrencies);
       } catch (error: unknown) {
         console.error("Error loading shop history:", error);
       }
@@ -314,6 +343,12 @@ export default function EditReceiptPage() {
 
     setLoading(true);
     try {
+      // 新單品類必填（同 macau-pos 一致）；舊單編輯唔強制。
+      if (routeId === "new" && !data.category?.trim()) {
+        setLoading(false);
+        return alert("請選擇品類（必填）");
+      }
+
       const basePayload = {
         receiptId: routeId !== "new" ? routeId : undefined,
         userId: user.id,
@@ -499,6 +534,68 @@ export default function EditReceiptPage() {
                 <option value="unpaid">{getPaymentStatusLabel("unpaid")}</option>
                 <option value="paid">{getPaymentStatusLabel("paid")}</option>
               </select>
+            </div>
+          </div>
+
+          {/* 品類（整張單一個，兩邊一致；選項來自歷史收據 ∪ 其他手動輸入） */}
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              品類 {routeId === "new" && <span className="text-red-500">*</span>}
+            </label>
+            {manualCategory || (data.category && !categoryOptions.includes(data.category)) ? (
+              <input
+                type="text"
+                value={data.category || ""}
+                onChange={(e) => setData({ ...data, category: e.target.value })}
+                placeholder="請輸入品類（如：食材／清潔用品／餐具）"
+                className="w-full font-bold border-b border-gray-100 py-2 focus:border-blue-500 outline-none transition-all"
+              />
+            ) : (
+              <select
+                value={categoryOptions.includes(data.category || "") ? data.category || "" : ""}
+                onChange={(e) => {
+                  if (e.target.value === "__other__") {
+                    setManualCategory(true);
+                    setData({ ...data, category: "" });
+                  } else {
+                    setManualCategory(false);
+                    setData({ ...data, category: e.target.value });
+                  }
+                }}
+                className="w-full font-bold border-b border-gray-100 py-2 outline-none focus:border-blue-500 bg-transparent"
+              >
+                <option value="">請選擇品類</option>
+                {categoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="__other__">其他…（手動輸入）</option>
+              </select>
+            )}
+          </div>
+
+          {/* 幣值（每張收據一個，預設 MOP） */}
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">幣值</label>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {currencyOptions.map((cur) => {
+                const active = (data.currency || "MOP") === cur;
+                return (
+                  <button
+                    key={cur}
+                    type="button"
+                    onClick={() => setData({ ...data, currency: cur })}
+                    className={`px-4 py-2 rounded-full text-sm font-black border transition-all ${
+                      active
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    {cur}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">

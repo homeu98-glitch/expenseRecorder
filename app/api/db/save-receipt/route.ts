@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       date,
       total_amount,
       currency,
+      category,
       items,
       image_data_url,
       image_url,
@@ -88,6 +89,30 @@ export async function POST(request: Request) {
       ? String(currency).trim().toUpperCase()
       : "MOP";
 
+    /*
+     * 🔴 2026-10-26：更新收據時**一定要 merge 現有 `raw_ocr_data`**，唔可以整份覆蓋。
+     *
+     * 呢個 route 一直係整份重建 `raw_ocr_data` —— 但 macau-pos 喺 `raw_ocr_data`
+     * 入面寫咗 `category`、`photo_paths` 等多個 key。如果一張 macau-pos 開嘅收據
+     * 喺 expenseRecorder 編輯頁按儲存，呢啲 key 會被**靜靜清走**（資料遺失）。
+     * 解法：更新路徑先讀返現有 `raw_ocr_data`，用展開合併做基底，
+     * 再覆蓋我哋有寫嘅 key；唔知嘅 key（如 `photo_paths`）原樣保留。
+     * 新增路徑（receiptId 冇值）冇現有資料，直接用空物件做基底。
+     */
+    const existingRawOcr =
+      receiptId
+        ? (
+            await supabase
+              .from("receipts")
+              .select("raw_ocr_data")
+              .eq("id", receiptId)
+              .eq("user_id", userId)
+              .maybeSingle()
+          )?.data?.raw_ocr_data ?? null
+        : null;
+
+    const categoryStr = String(category ?? "").trim() || null;
+
     const receiptPayload = {
       user_id: userId,
       merchant_id: merchant.id,
@@ -110,6 +135,7 @@ export async function POST(request: Request) {
       currency: currencyStr,
       image_url: savedImagePath,
       raw_ocr_data: {
+        ...(existingRawOcr && typeof existingRawOcr === "object" ? existingRawOcr : {}),
         receipt_number: receipt_number || null,
         payment_method: payment_method || "on_delivery",
         payment_status: payment_status || "unpaid",
@@ -117,6 +143,8 @@ export async function POST(request: Request) {
         // 🔴 2026-10-14：同頂層 `currency` 寫**同一個值**（同一條規則，見上）。
         // 呢個 key 係 macau-pos 收帳清單／品項分析嘅顯示來源，兩邊唔可以再分叉。
         currency: currencyStr,
+        // 🔴 2026-10-26：整張單嘅品類（兩邊一致）；未提供 ⇒ null（舊單唔強制）。
+        category: categoryStr,
         item_metadata: (Array.isArray(items) ? (items as ReceiptItemInput[]) : []).map((item) => ({
           name: item.name,
           quantity_unit: item.quantity_unit || "unit",
